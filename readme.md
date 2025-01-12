@@ -30,18 +30,18 @@
 
 Чтобы установить скрипт, нажмите на нужную ссылку и подтвердите установку в появившемся окне.
 
-* [Скрипт боя (для всех автокачей)]()
-* [Скрипт с вспомогательными функциями (для всех автокачей)]
+* [Скрипт боя (для всех автокачей)](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_battle.user.js)
+* [Скрипт с вспомогательными функциями (для всех автокачей)](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_utils.user.js)
 * Боты и квесты:
-  * [Призрак барона, Призрак воина]()
-  * [Волк вожак стаи, Матерый волк]()
-  * [Призрак Блейка, Пират]()
-  * [Горгулья]()
-  * [Молег]()
-  * [Дух гнома]()
-  * [Прокачка подкласса «Паладин»]()
-* [Автофорт]()
-* [Авторыбалка]()
+  * [Призрак барона, Призрак воина](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_baron.user.js)
+  * [Волк вожак стаи, Матерый волк](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_volki.user.js)
+  * [Призрак Блейка, Пират](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_bleyk.user.js)
+  * [Горгулья](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_gorgulya.user.js)
+  * [Молег](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_moleg.user.js)
+  * [Дух гнома](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_gnom.user.js)
+  * [Прокачка подкласса «Паладин»](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_paladin.user.js)
+* [Автофорт](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_rabota.user.js)
+* [Авторыбалка](https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/lbast_ribalka.user.js)
 
 ### Ссылки, по котором будет работать автокач
 

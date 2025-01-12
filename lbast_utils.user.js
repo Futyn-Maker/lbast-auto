@@ -12,8 +12,8 @@
     'use strict';
 
     const SOUNDS = {
-        letter: 'https://lbast-auto.surge.sh/sounds/letter.mp3',
-        alarm: 'https://lbast-auto.surge.sh/sounds/alarm.mp3'
+        letter: 'https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/sounds/letter.mp3',
+        alarm: 'https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/sounds/alarm.mp3'
     };
 
     const TG_TOKEN = '7814020401:AAGYDoBVNV7x8ObBci2wIu3QrSB_J4e1_CM';
