@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_battle
 // @namespace    http://tampermonkey.net/
-// @version      2025.01.13
+// @version      2025.01.18
 // @author       Agent_
 // @include      *auto.lbast.ru/arena_go*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -54,7 +54,7 @@
             utils.sendTGMessage('На вас напали! Из ' + location.hostname);
 
             const nickLink = $('a').filter(function() {
-                return /^[a-zA-Z_]+$/.test($(this).text());
+                return /^[a-zA-Z0-9_]+$/.test($(this).text());
             }).first();
 
             xhr.open('GET', nickLink.attr('href'), false);
