@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_utils
 // @namespace    http://tampermonkey.net/
-// @version      2025.01.13
+// @version      2025.02.18
 // @author       Agent_
 // @include      *auto.lbast.ru/*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -56,9 +56,9 @@
         }, time);
     }
 
-    function playSound(type) {
-        if(localStorage.lbastAuto_letterSound === 'true' && type === 'letter' ||
-           localStorage.lbastAuto_alarmSound === 'true' && type === 'alarm') {
+    function playSound(type, check = true) {
+        if(!check || (localStorage.lbastAuto_letterSound === 'true' && type === 'letter') ||
+                    (localStorage.lbastAuto_alarmSound === 'true' && type === 'alarm')) {
             const audio = document.createElement('audio');
             audio.src = SOUNDS[type];
             audio.play();
@@ -98,13 +98,13 @@
                     <label>Воспроизводить звук при получении нового письма
                         <input type="checkbox" name="letterSound" tabindex="0" ${localStorage.lbastAuto_letterSound === 'true' ? 'checked' : ''}/>
                     </label>
-                    <input type="button" value="Прослушать звук" tabindex="0" onclick="LbastUtils.playSound('letter')"/>
+                    <input type="button" value="Прослушать звук" tabindex="0" onclick="LbastUtils.playSound('letter', false)"/>
                 </p>
                 <p>
                     <label>Воспроизводить звук при нападении на вас
                         <input type="checkbox" name="alarmSound" tabindex="0" ${localStorage.lbastAuto_alarmSound === 'true' ? 'checked' : ''}/>
                     </label>
-                    <input type="button" value="Прослушать звук" tabindex="0" onclick="LbastUtils.playSound('alarm')"/>
+                    <input type="button" value="Прослушать звук" tabindex="0" onclick="LbastUtils.playSound('alarm', false)"/>
                 </p>
                 <p>
                     <label>Задержка между кликами (в миллисекундах):
