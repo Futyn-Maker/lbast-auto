@@ -6,7 +6,7 @@
 
 Из [законов игры](http://lbast.ru/index.php?&mod=rules)
 
-> 10. Автокач, т.е. автоматическая прокачка персонажа с помощью программных средств (браузер с автообновлением также является программным средством).  
+> 10\. Автокач, т.е. автоматическая прокачка персонажа с помощью программных средств (браузер с автообновлением также является программным средством).  
 > Санкции:  
 > Первый раз - штраф 10000 дин на уровень; повторно - блокирование аккаунта.
 
@@ -16,7 +16,7 @@
 
 1. Установите менеджер пользовательских скриптов в зависимости от браузера, который вы используете:
   * Chrome и все Chromium-браузеры: [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
-  * Firefox: [Greasemonkey)(https://addons.mozilla.org/firefox/addon/greasemonkey/) или [Tampermonkey](https://addons.mozilla.org/firefox/addon/tampermonkey/)
+  * Firefox: [Greasemonkey](https://addons.mozilla.org/firefox/addon/greasemonkey/) или [Tampermonkey](https://addons.mozilla.org/firefox/addon/tampermonkey/)
   * Microsoft Edge: [Tampermonkey](https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd)
   * Opera: [Tampermonkey](https://addons.opera.com/extensions/details/tampermonkey-beta/)
   * Safari: [Tampermonkey](https://www.tampermonkey.net/?browser=safari) или [Userscripts](https://apps.apple.com/app/userscripts/id1463298887)
