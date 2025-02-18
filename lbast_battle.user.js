@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_battle
 // @namespace    http://tampermonkey.net/
-// @version      2025.01.18
+// @version      2025.02.18
 // @author       Agent_
 // @include      *auto.lbast.ru/arena_go*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -25,61 +25,90 @@
             setTimeout(() => {
                 location.href = location.origin + '/location.php';
             }, 300000);
+            return;
         }
-        else if($("a:contains('Умение')").length) {
-            utils.click('Умение');
-        }
-        else if($("a:contains('Ударить')").length) {
-            utils.click('Ударить');
-        }
-        else if(~str.indexOf('автобан')) {
+
+        if(~str.indexOf('автобан')) {
             setTimeout(() => {
                 location.reload();
             }, 7500);
+            return;
         }
-        else if($("a:contains('ход соперника')").length) {
-            setTimeout(() => {
-                utils.click('ход соперника');
-            }, 5000);
-        }
-        else if($("a:contains('ернуться')").length) {
+
+        if($("a:contains('ернуться')").length) {
             utils.click('ернуться');
+            return;
         }
-        else if(~str.indexOf('Левиафан') || ~str.indexOf('Призрак ворот') || ~str.indexOf('Дух заставы')) {
+
+        if($("a:contains('ой завершен')").length) {
+            utils.click('ой завершен');
+            return;
+        }
+
+        const isGroupPveBattle = ~str.indexOf('Левиафан') || ~str.indexOf('Призрак ворот') || ~str.indexOf('Дух заставы');
+        const playerNickLink = $('a').filter(function() {
+            return /^[a-zA-Z0-9_]+$/.test($(this).text());
+        }).first();
+        const isPvpBattle = !isGroupPveBattle && playerNickLink.length > 0;
+
+        if(isGroupPveBattle) {
             setTimeout(() => {
                 location.href = location.origin + '/arena_go.php';
             }, 60000);
-        } else {
-            utils.playSound('alarm');
-            utils.sendTGMessage('На вас напали! Из ' + location.hostname);
+            return;
+        }
 
-            const nickLink = $('a').filter(function() {
-                return /^[a-zA-Z0-9_]+$/.test($(this).text());
-            }).first();
+        if(!isPvpBattle) {
+            if($("a:contains('Умение')").length) {
+                utils.click('Умение');
+            } else if($("a:contains('Ударить')").length) {
+                utils.click('Ударить');
+            }
+            return;
+        }
 
-            xhr.open('GET', nickLink.attr('href'), false);
+        if($("a:contains('ход соперника')").length) {
+            setTimeout(() => {
+                utils.click('ход соперника');
+            }, 5000);
+            return;
+        }
+
+        utils.playSound('alarm');
+        utils.sendTGMessage('На вас напали! Из ' + location.hostname);
+
+        setTimeout(() => {
+            xhr.open('GET', playerNickLink.attr('href'), false);
             xhr.send();
-            const t = xhr.responseText;
+            const playerStatus = xhr.responseText;
 
-            if(~t.indexOf('раздничный эль') || ~t.indexOf('рага') || ~t.indexOf('одка') || 
-               ~t.indexOf('вино преми') || ~t.indexOf('оньяк') || ~t.indexOf('имонад')) {
-                xhr.open('GET', location.origin + '/arena_go.php?r=7241&mod=invaction', false);
-                xhr.send();
-                
-                if(~xhr.responseText.indexOf('Эликсир отравления')) {
-                    xhr.open('GET', location.origin + '/arena_go.php?r=6074&mod=invaction_el_otravleniya', false);
+            const needsPoison = ~playerStatus.indexOf('раздничный эль') || ~playerStatus.indexOf('рага') || 
+                               ~playerStatus.indexOf('одка') || ~playerStatus.indexOf('вино преми') || 
+                               ~playerStatus.indexOf('оньяк') || ~playerStatus.indexOf('имонад');
+
+            if(needsPoison) {
+                setTimeout(() => {
+                    xhr.open('GET', location.origin + '/arena_go.php?r=7241&mod=invaction', false);
                     xhr.send();
-                    setTimeout(() => {
-                        utils.click('Обновить');
-                    }, 3000);
-                } else {
-                    setTimeout(() => {
-                        const hitButton = $("input[value='Бить'], input[type='image'][src*='boj_hit.gif']");
-                        if(hitButton.length) {
-                            hitButton.click();
-                        }
-                    }, 90000);
-                }
+                    const hasPoison = ~xhr.responseText.indexOf('Эликсир отравления');
+
+                    if(hasPoison) {
+                        setTimeout(() => {
+                            xhr.open('GET', location.origin + '/arena_go.php?r=6074&mod=invaction_el_otravleniya', false);
+                            xhr.send();
+                            setTimeout(() => {
+                                utils.click('Обновить');
+                            }, 5000);
+                        }, 1500);
+                    } else {
+                        setTimeout(() => {
+                            const hitButton = $("input[value='Бить'], input[type='image'][src*='boj_hit.gif']");
+                            if(hitButton.length) {
+                                hitButton.click();
+                            }
+                        }, 90000);
+                    }
+                }, 1500);
             } else {
                 setTimeout(() => {
                     const hitButton = $("input[value='Бить'], input[type='image'][src*='boj_hit.gif']");
@@ -88,9 +117,7 @@
                     }
                 }, 90000);
             }
-        }
-
-        utils.click('ой завершен');
+        }, 0);
     }
 
     if(window.LbastUtils && window.LbastUtils.ready) {
