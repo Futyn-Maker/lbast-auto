@@ -89,7 +89,7 @@
                     </label>
                 </p>
                 <p>
-                    <label>Ваш ID в Telegram для получения оповещений о письмах и нападениях:
+                    <label>Ваш ID в Telegram для получения оповещений о письмах, нападениях и проверках на автокач:
                         <input name="TGID" type="number" min="0" tabindex="0" value="${localStorage.lbastAuto_TGID || ''}"/>
                     </label>
                 </p>
@@ -101,7 +101,7 @@
                     <input type="button" value="Прослушать звук" tabindex="0" onclick="LbastUtils.playSound('letter', false)"/>
                 </p>
                 <p>
-                    <label>Воспроизводить звук при нападении на вас
+                    <label>Воспроизводить звук при нападении на вас или проверке на автокач
                         <input type="checkbox" name="alarmSound" tabindex="0" ${localStorage.lbastAuto_alarmSound === 'true' ? 'checked' : ''}/>
                     </label>
                     <input type="button" value="Прослушать звук" tabindex="0" onclick="LbastUtils.playSound('alarm', false)"/>

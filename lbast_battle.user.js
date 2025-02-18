@@ -28,6 +28,15 @@
             return;
         }
 
+        if(~str.indexOf('Для продолжения боя ответьте на вопрос')) {
+            utils.playSound('alarm');
+            utils.sendTGMessage('Проверка на автокач! Из ' + location.hostname);
+            setTimeout(() => {
+                location.reload();
+            }, 180000);
+            return;
+        }
+
         if(~str.indexOf('автобан')) {
             setTimeout(() => {
                 location.reload();
