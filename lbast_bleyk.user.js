@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_bleyk
 // @namespace    http://tampermonkey.net/
-// @version      2025.01.13
+// @version      2025.02.23
 // @author       Agent_
 // @include      *bleyk-auto.lbast.ru/loc*
 // @include      *bleyk-auto.lbast.ru/pers*
@@ -28,6 +28,12 @@
         const myHP = utils.parseHP(str);
         const houseHP = localStorage.lbastAuto_houseHP;
         const xhr = new XMLHttpRequest();
+
+        const playerInfo = utils.getPlayerInfo();
+        if(!playerInfo || !playerInfo.alignment) {
+            return;
+        }
+        const hometown = utils.HOMETOWN[playerInfo.alignment];
 
         document.getElementsByTagName('title')[0].innerHTML = 'Автокач (Блейки), Последний Бастион';
         document.body.innerHTML += '<footer><a href="' + location.origin + '/settings">Настроить автокач</a></footer>';
@@ -60,7 +66,7 @@
             }, 2500);
             utils.update(3000);
         }
-        else if(~str.indexOf('поднятый в')) {
+        else if(~str.indexOf('Центральная площадь') || ~str.indexOf('поднятый в') || ~str.indexOf('Северо-западный форпост')) {
             if(myHP >= goHP) {
                 if(localStorage.lbastAuto_expo === 'true') {
                     xhr.open('GET', location.origin + '/pers.php?r=3503', false);
@@ -91,11 +97,11 @@
             if(myHP >= goHP) {
                 utils.click('Зайти');
             } else {
-                location.href = location.origin + '/location.php?r=2012&mod=fastway&lway=3';
+                location.href = location.origin + `/location.php?r=2012&mod=fastway&lway=${hometown}`;
             }
         }
         else if(~str.indexOf('устали')) {
-            xhr.open('GET', location.origin + '/location.php?r=9463&mod=fastway&lway=3', false);
+            xhr.open('GET', location.origin + `/location.php?r=9463&mod=fastway&lway=${hometown}`, false);
             xhr.send();
             if(~xhr.responseText.indexOf('бой')) {
                 location.href = location.origin + '/location.php';
@@ -123,7 +129,7 @@
                 utils.update(rand * 2400);
             }
             else {
-                location.href = location.origin + '/location.php?r=3594&mod=fastway&lway=3';
+                location.href = location.origin + `/location.php?r=3594&mod=fastway&lway=${hometown}`;
             }
         }
         else if(~str.indexOf('автобан')) {
@@ -160,7 +166,7 @@
             }, (rtime * 60000) + 60000);
         } else {
             if(myHP < goHP) {
-                location.href = location.origin + '/location.php?r=3594&mod=fastway&lway=3';
+                location.href = location.origin + `/location.php?r=3594&mod=fastway&lway=${hometown}`;
             } else {
                 location.href = location.origin + '/location.php?r=8963&mod=konj&lway=14';
             }
