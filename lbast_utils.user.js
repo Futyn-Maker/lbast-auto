@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_utils
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.18
+// @version      2025.02.23
 // @author       Agent_
 // @include      *auto.lbast.ru/*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -16,7 +16,63 @@
         alarm: 'https://github.com/Futyn-Maker/lbast-auto/raw/refs/heads/main/sounds/alarm.mp3'
     };
 
+    const HOMETOWN = {
+        light: 2,
+        dark: 3,
+        sarimat: 6,
+        neutral: 2
+    };
+
     const TG_TOKEN = '7814020401:AAGYDoBVNV7x8ObBci2wIu3QrSB_J4e1_CM';
+
+    function getPlayerInfo() {
+        if(sessionStorage.lbastAuto_playerNickname && sessionStorage.lbastAuto_playerAlignment) {
+            return {
+                nickname: sessionStorage.lbastAuto_playerNickname,
+                alignment: sessionStorage.lbastAuto_playerAlignment
+            };
+        }
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', location.origin + '/pers.php?r=5778', false);
+        xhr.send();
+
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = xhr.responseText;
+        const profileLink = $(tempDiv).find("a:contains('Анкета'), a:contains('ПЕРСОНАЖ')").attr('href');
+    
+        if(!profileLink) {
+            return null;
+        }
+
+        const nickname = profileLink.match(/blogin=([^&]+)/)[1];
+        if(nickname) {
+            sessionStorage.lbastAuto_playerNickname = nickname;
+        }
+
+        xhr.open('GET', location.origin + '/' + profileLink, false);
+        xhr.send();
+
+        let alignment = null;
+        if(~xhr.responseText.indexOf('Государство: Империя')) {
+            alignment = 'light';
+        } else if(~xhr.responseText.indexOf('Мировоззрение: темный')) {
+            alignment = 'dark';
+        } else if(~xhr.responseText.indexOf('Государство: Сариматское братство')) {
+            alignment = 'sarimat';
+        } else if(~xhr.responseText.indexOf('Мировоззрение: нейтрал')) {
+            alignment = 'neutral';
+    }
+
+        if(alignment) {
+            sessionStorage.lbastAuto_playerAlignment = alignment;
+        }
+
+        return {
+            nickname: sessionStorage.lbastAuto_playerNickname,
+            alignment: sessionStorage.lbastAuto_playerAlignment
+        };
+    }
 
     if(isNaN(localStorage.lbastAuto_timeClick)) {
         localStorage.lbastAuto_timeClick = 200;
@@ -162,6 +218,7 @@
     window.LbastUtils = {
         SOUNDS,
         TG_TOKEN,
+        HOMETOWN,
         
         click,
         send,
@@ -169,6 +226,7 @@
         playSound,
         sendTGMessage,
         parseHP,
+        getPlayerInfo,
         
         renderSettings,
         saveSettings,

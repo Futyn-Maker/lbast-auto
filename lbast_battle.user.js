@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_battle
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.18
+// @version      2025.02.23
 // @author       Agent_
 // @include      *auto.lbast.ru/arena_go*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -20,6 +20,12 @@
         const utils = window.LbastUtils;
         const str = $("body").text();
         const xhr = new XMLHttpRequest();
+
+        const playerInfo = utils.getPlayerInfo();
+        if(!playerInfo || !playerInfo.nickname) {
+            return;
+        }
+        const playerNickname = playerInfo.nickname;
 
         if(~str.indexOf('Другой IP')) {
             setTimeout(() => {
@@ -56,7 +62,7 @@
 
         const isGroupPveBattle = ~str.indexOf('Левиафан') || ~str.indexOf('Призрак ворот') || ~str.indexOf('Дух заставы');
         const playerNickLink = $('a').filter(function() {
-            return /^[a-zA-Z0-9_]+$/.test($(this).text());
+            return /^[a-zA-Z0-9_]+$/.test($(this).text()) && $(this).text() !== playerNickname;
         }).first();
         const isPvpBattle = !isGroupPveBattle && playerNickLink.length > 0;
 
