@@ -70,7 +70,7 @@
         }
         else if(~str.indexOf('гладкой каменистой поверхностью')) {
             if(myHP >= goHP) {
-                utils.click('гулять');
+                utils.click('Пройтись');
             } else {
                 location.href = location.origin + `/location.php?r=2012&mod=fastway&lway=${hometown}`;
             }
