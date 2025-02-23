@@ -55,7 +55,7 @@
         else if(~str.indexOf('в это место невозможно')) {
             location.href = location.origin + '/location.php?r=7484&mod=konj&lway=6';
         }
-        else if(~str.indexOf('Центральная площадь') || ~str.indexOf('поднятый в') || ~str.indexOf('Северо-западный форпост')) {
+        else if((~str.indexOf('Центральная площадь') && hometown === 2) || (~str.indexOf('поднятый в') && hometown === 3) || (~str.indexOf('Северо-западный форпост') && hometown === 6)) {
             if(myHP >= goHP) {
                 location.href = location.origin + '/location.php?r=2148&mod=fastway&lway=1';
             }
