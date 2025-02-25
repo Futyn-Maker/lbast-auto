@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_bleyk
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.23
+// @version      2025.02.25
 // @author       Agent_
 // @include      *bleyk-auto.lbast.ru/loc*
 // @include      *bleyk-auto.lbast.ru/pers*
@@ -27,6 +27,7 @@
         const goHP = localStorage.lbastAuto_goHP;
         const myHP = utils.parseHP(str);
         const houseHP = localStorage.lbastAuto_houseHP;
+        const useDukeEstate = localStorage.lbastAuto_useDukeEstate === 'true';
         const xhr = new XMLHttpRequest();
 
         const playerInfo = utils.getPlayerInfo();
@@ -85,7 +86,11 @@
                 }
             }
             else if(myHP <= houseHP) {
-                location.href = location.origin + '/location.php?r=1460&mod=fastway&lway=4';
+                if(useDukeEstate) {
+                    location.href = location.origin + '/location.php?r=1450&mod=konj&lway=22';
+                } else {
+                    location.href = location.origin + '/location.php?r=1460&mod=fastway&lway=4';
+                }
             }
             else if(myHP <= 0) {
                 utils.update(rand * 1200);
@@ -121,7 +126,7 @@
         else if(~str.indexOf('зарыл здесь награбленные сокровища')) {
             utils.click('север');
         }
-        else if(~str.indexOf('был заложен первый камень форта')) {
+        else if((~str.indexOf('был заложен первый камень форта') && !useDukeEstate) || (~str.indexOf('родовые поместья высшей знати Ардена') && useDukeEstate)) {
             if(myHP >= goHP) {
                 location.href = location.origin + '/location.php?r=8963&mod=konj&lway=14';
             }
@@ -131,6 +136,9 @@
             else {
                 location.href = location.origin + `/location.php?r=3594&mod=fastway&lway=${hometown}`;
             }
+        }
+        else if(~str.indexOf('Вокруг расстилаются бескрайние поля пшеницы') && useDukeEstate) {
+            utils.click('Королевская долина');
         }
         else if(~str.indexOf('автобан')) {
             setTimeout(() => {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_utils
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.23
+// @version      2025.02.25
 // @author       Agent_
 // @include      *auto.lbast.ru/*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -86,6 +86,9 @@
     if(localStorage.lbastAuto_alarmSound === undefined) {
         localStorage.lbastAuto_alarmSound = 'true';
     }
+    if(localStorage.lbastAuto_useDukeEstate === undefined) {
+        localStorage.lbastAuto_useDukeEstate = 'false';
+    }
 
     function click(text) {
         const timeClick = parseInt(localStorage.lbastAuto_timeClick);
@@ -140,10 +143,17 @@
                     </label>
                 </p>
                 <p>
-                    <label>Отрицательное значение HP, при котором автокач пойдёт лечиться в Кулак Хаоса:
+                    <label>Отрицательное значение HP, при котором автокач пойдёт лечиться в Кулак Хаоса или поместье:
                         <input name="houseHP" type="number" max="-1" tabindex="0" value="${localStorage.lbastAuto_houseHP}"/>
                     </label>
                 </p>
+                <p>
+                    <label>
+                        <input type="checkbox" name="useDukeEstate" tabindex="0" ${localStorage.lbastAuto_useDukeEstate === 'true' ? 'checked' : ''}/>
+                        Лечиться в поместье герцога вместо Кулака Хаоса
+                    </label>
+                </p>
+                <p>Отметьте эту опцию только если ваш титул не ниже герцога и вы приобрели поместье.</p>
                 <p>
                     <label>Ваш ID в Telegram для получения оповещений о письмах, нападениях и проверках на автокач:
                         <input name="TGID" type="number" min="0" tabindex="0" value="${localStorage.lbastAuto_TGID || ''}"/>
@@ -178,6 +188,7 @@
         const form = document.forms.settings;
         localStorage.lbastAuto_goHP = form.elements.goHP.value;
         localStorage.lbastAuto_houseHP = form.elements.houseHP.value;
+        localStorage.lbastAuto_useDukeEstate = form.elements.useDukeEstate.checked;
         localStorage.lbastAuto_TGID = form.elements.TGID.value;
         localStorage.lbastAuto_letterSound = form.elements.letterSound.checked;
         localStorage.lbastAuto_alarmSound = form.elements.alarmSound.checked;
