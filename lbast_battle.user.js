@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_battle
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.23
+// @version      2025.02.25
 // @author       Agent_
 // @include      *auto.lbast.ru/arena_go*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -27,6 +27,13 @@
         }
         const playerNickname = playerInfo.nickname;
 
+        if(sessionStorage.lbastAuto_checkAttempted && !~str.indexOf('Для продолжения боя ответьте на вопрос')) {
+            utils.sendTGMessage('Проверка на автокач пройдена автоматически! Из ' + location.hostname);
+            delete sessionStorage.lbastAuto_checkAttempted;
+            location.reload();
+            return;
+        }
+
         if(~str.indexOf('Другой IP')) {
             setTimeout(() => {
                 location.href = location.origin + '/location.php';
@@ -35,11 +42,64 @@
         }
 
         if(~str.indexOf('Для продолжения боя ответьте на вопрос')) {
+            if(sessionStorage.lbastAuto_checkAttempted) {
+                utils.playSound('alarm');
+                utils.sendTGMessage('Проверка на автокач! Не удалось пройти автоматически. Из ' + location.hostname);
+                setTimeout(() => {
+                    location.reload();
+                }, 180000);
+                return;
+            }
+
             utils.playSound('alarm');
-            utils.sendTGMessage('Проверка на автокач! Из ' + location.hostname);
-            setTimeout(() => {
-                location.reload();
-            }, 180000);
+            utils.sendTGMessage('Проверка на автокач! Пытаюсь пройти автоматически... Из ' + location.hostname);
+            sessionStorage.lbastAuto_checkAttempted = 'true';
+
+            try {
+                const html = document.body.innerHTML;
+                const questionMatch = html.match(/Для продолжения боя ответьте на вопрос:<br><br>([^<]+)<br>/);
+                
+                if(!questionMatch || !questionMatch[1]) {
+                    throw new Error("Couldn't extract question");
+                }
+
+                const question = questionMatch[1].trim().replace(/\s+/g, '');
+                let operator, leftOperand, rightOperand, result;
+
+                if(~question.indexOf('+')) {
+                    operator = '+';
+                    [leftOperand, rightOperand] = question.split('+');
+                    result = parseInt(leftOperand) + parseInt(rightOperand);
+                } else if(~question.indexOf('-')) {
+                    operator = '-';
+                    [leftOperand, rightOperand] = question.split('-');
+                    result = parseInt(leftOperand) - parseInt(rightOperand);
+                } else if(~question.indexOf('*')) {
+                    operator = '*';
+                    [leftOperand, rightOperand] = question.split('*');
+                    result = parseInt(leftOperand) * parseInt(rightOperand);
+                } else {
+                    throw new Error("Couldn't identify operator");
+                }
+
+                if(isNaN(result)) {
+                    throw new Error("Calculation error");
+                }
+
+                const delay = 7000 + Math.floor(Math.random() * 8000);
+                setTimeout(() => {
+                    $("input[name='anumb']").val(result);
+                    setTimeout(() => {
+                        $("input[type='submit'][value='далее']").click();
+                    }, 700 + Math.floor(Math.random() * 500));
+                }, delay);
+
+            } catch(e) {
+                console.error("Auto-check failed:", e);
+                setTimeout(() => {
+                    location.reload();
+                }, 5000);
+            }
             return;
         }
 
