@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_gnom
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.25
+// @version      2025.06.21
 // @author       Agent_
 // @include      *gnom-auto.lbast.ru/loc*
 // @include      *gnom-auto.lbast.ru/rudnik*
@@ -73,7 +73,7 @@
                 utils.update(rand * 480);
             }
         }
-        else if(~str.indexOf('гладкой каменистой поверхностью')) {
+        else if(~str.indexOf('Гладкая каменистая поверхность утеса')) {
             if(myHP >= goHP) {
                 utils.click('Пройтись');
             } else {
