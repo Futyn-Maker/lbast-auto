@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_moleg
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.25
+// @version      2025.08.12
 // @author       Agent_
 // @include      *moleg-auto.lbast.ru/loc*
 // @include      *moleg-auto.lbast.ru/rudnik*
@@ -80,7 +80,7 @@
                 location.href = location.origin + `/location.php?r=2012&mod=fastway&lway=${hometown}`;
             }
         }
-        else if(~str.indexOf('какой то утробный гул')) {
+        else if(~str.indexOf('утробный рев')) {
             utils.click('Встретить');
         }
         else if(~str.indexOf('устали')) {
