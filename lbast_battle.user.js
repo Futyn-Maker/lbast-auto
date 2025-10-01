@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_battle
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.25
+// @version      2025.10.01
 // @author       Agent_
 // @include      *auto.lbast.ru/arena_go*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -47,7 +47,7 @@
                 utils.sendTGMessage('Проверка на автокач! Не удалось пройти автоматически. Из ' + location.hostname);
                 setTimeout(() => {
                     location.reload();
-                }, 180000);
+                }, 15000);
                 return;
             }
 
@@ -58,6 +58,7 @@
             try {
                 const html = document.body.innerHTML;
                 const questionMatch = html.match(/Для продолжения боя ответьте на вопрос:<br><br>([^<]+)<br>/);
+                utils.sendTGMessage('Вопрос: ' + questionMatch + '\nИз ' + location.hostname);
                 
                 if(!questionMatch || !questionMatch[1]) {
                     throw new Error("Couldn't extract question");
