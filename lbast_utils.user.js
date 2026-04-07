@@ -23,7 +23,7 @@
         neutral: 2
     };
 
-    const TG_TOKEN = '7814020401:AAGYDoBVNV7x8ObBci2wIu3QrSB_J4e1_CM';
+    const TG_TOKEN = '7814020401:AAHYQ3sqz7gtq5ErLaPMj7_BcKDWa274Rzc';
 
     function getPlayerInfo() {
         if(sessionStorage.lbastAuto_playerNickname && sessionStorage.lbastAuto_playerAlignment) {
