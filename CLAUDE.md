@@ -1,0 +1,75 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Overview
+
+This repo is a collection of Tampermonkey/Greasemonkey userscripts that automate gameplay in the Russian browser game "Последний бастион" (lbast.ru). There is **no build system, package manager, lint, or test framework** — each `*.user.js` file is installed directly into a userscript manager via its GitHub raw URL. All user-facing text (settings UI, Telegram notifications, in-script messages) is in Russian, and bot scripts detect game state by matching Russian substrings in page text.
+
+## Architecture
+
+### Two-tier script model
+
+Scripts split into **shared infrastructure** (loaded on every auto-kach subdomain) and **per-bot driver scripts** (loaded on one subdomain each):
+
+- [lbast_utils.user.js](lbast_utils.user.js) — shared library. Exposes `window.LbastUtils` with `click`, `send`, `update`, `playSound`, `sendTGMessage`, `parseHP`, `getPlayerInfo`, plus the settings-page renderer. Also owns `localStorage.lbastAuto_*` settings (HP thresholds, Telegram ID, click delay, sound toggles, duke-estate flag) and the `HOMETOWN` map (`light`/`dark`/`sarimat`/`neutral` → location id). Fires a `LbastUtilsReady` event and sets `window.LbastUtils.ready = true` once loaded.
+- [lbast_battle.user.js](lbast_battle.user.js) — shared combat handler. `@include *auto.lbast.ru/arena_go*`, so it runs inside any bot's arena page. Handles the anti-autokach captcha, Другой IP cooldown, PvE skill-then-hit loop, group PvE refresh, and PvP response (sound + TG alert + optional poison elixir + 90s hit loop).
+- Per-bot drivers — `lbast_baron`, `lbast_bleyk`, `lbast_gnom`, `lbast_gorgulya`, `lbast_moleg`, `lbast_paladin`, `lbast_volki`. Each `@include`s its own `*-auto.lbast.ru/loc*`, `/rudnik*`, and `/settings*` paths.
+
+Every driver waits for `LbastUtilsReady` before executing; if utils is missing after 2s, the page body is replaced with an install-utils message. Always preserve this bootstrap block when editing drivers.
+
+### Standalone scripts (different pattern)
+
+[lbast_rabota.user.js](lbast_rabota.user.js) (auto-fort) and [lbast_ribalka.user.js](lbast_ribalka.user.js) (auto-fishing) run on the **main** game domain (`@exclude *auto.lbast.ru*`) rather than the auto-kach subdomains. They do **not** use `LbastUtils` and have their own inline `click()` helpers. They react only when the user manually initiates the activity.
+
+### Driver control flow
+
+All bot drivers follow the same `if/else if` chain pattern against `$("body").text()`:
+
+1. Render settings page if URL is `/settings`.
+2. Bail out with a "not configured" message if `goHP` is unset.
+3. Handle incoming mail: play letter sound, TG-notify, mark-all-read via `letters.php?...mod=readall`, then `utils.update(3000)`.
+4. Handle "в это место невозможно" (blocked teleport) — jump to a safe location.
+5. Handle hometown detection (Центральная площадь / поднятый в / Северо-западный форпост, keyed off the alignment-derived `hometown` id): decide between going to the bot (`myHP >= goHP`), going to heal (`myHP <= houseHP`, to Кулак Хаоса via `lway=4` or duke estate via `konj&lway=22`), or scheduling a refresh via `utils.update(...)`.
+6. A sequence of `~str.indexOf('...')` location-description matches that walk the character toward the target bot, each issuing `utils.click('direction')`.
+7. Target-reached block: attack if HP ok, else teleport home.
+8. Tail handlers: автобан reload, "В бой" entry, работа/rudnik (fort) interleaved handling, fallback "go home or go to target" default.
+
+**Critical:** location-description matches break when the game changes location text — recent commits (`63542c0`, `14e04d2`) are fixes exactly for this. When editing these matches, keep them as substrings unique enough to avoid collisions with other locations but short enough to survive minor text tweaks.
+
+### Battle script control flow
+
+[lbast_battle.user.js](lbast_battle.user.js) runs on every `arena_go*` page under any `*auto.lbast.ru` subdomain and follows its own `if/else if` chain against `$("body").text()` plus a few DOM checks:
+
+1. Guard: require `window.LbastUtils.ready`; otherwise show the "install utils" message.
+2. Fetch `playerNickname` via `getPlayerInfo()`; bail out silently if unavailable (needed later to distinguish PvP).
+3. **Captcha success check** — if `sessionStorage.lbastAuto_checkAttempted` is set **and** the "Для продолжения боя ответьте на вопрос" text is gone, notify via TG that the captcha was passed, clear the flag, reload.
+4. **"Другой IP"** — the user opened the game on another device: schedule a 5-minute `location.php` jump and return (the driver will refresh from there).
+5. **Captcha present** ("Для продолжения боя ответьте на вопрос"):
+   - If `checkAttempted` is already set, this is a second failure: play alarm, TG-notify the failure, reload after 15s.
+   - Otherwise: play alarm, TG-notify that an attempt is starting, set `checkAttempted = 'true'`, extract the arithmetic expression from the HTML (`/Для продолжения боя.../` regex), TG-send the raw question for visibility, detect `+`/`-`/`*`, compute the result, wait a randomized 7–15s, fill `input[name='anumb']`, then click `input[type='submit'][value='далее']` after another short delay. On any thrown error, reload after 5s.
+6. **"автобан"** — schedule a 7.5s reload and return.
+7. **"ернуться" / "ой завершен"** links — click them (battle cleanup states).
+8. **Group PvE detection** — body contains "Левиафан", "Призрак ворот", or "Дух заставы": jump back to `arena_go.php` after 60s and return. No per-turn logic for these.
+9. **PvP detection** — find the first anchor whose text is a `[A-Za-z0-9_]+` nickname that differs from `playerNickname`. If none, it's PvE.
+10. **PvE branch** — click "Умение" (skill) if present, else "Ударить" (hit).
+11. **PvP branch:**
+    - If "ход соперника" (opponent's turn) is on the page, click it after 5s to advance and return.
+    - Otherwise play alarm and TG-notify "На вас напали!".
+    - Fetch the opponent profile (sync XHR to their link) and look for drink states (раздничный эль, брага, водка, вино преми, коньяк, лимонад) that indicate the opponent is drunk/poisonable.
+    - If poisonable: GET `arena_go.php?r=7241&mod=invaction` to open inventory, check for "Эликсир отравления"; if present, GET the use-elixir URL (`r=6074&mod=invaction_el_otravleniya`) and click "Обновить" after 5s.
+    - If no poison (or no drink state): wait 90s, then click the hit button (`input[value='Бить']` or the image-input fallback).
+
+**Critical:** the captcha handler is single-shot per page load, gated by `sessionStorage.lbastAuto_checkAttempted`. Any rework must preserve that flag so a silently-failing solve attempt doesn't loop. The 90s PvP delay and 7–15s captcha delay are deliberately human-paced — do not tighten them.
+
+### State and side-effect conventions
+
+- **Settings persistence:** all user settings go in `localStorage.lbastAuto_*` keys (`goHP`, `houseHP`, `useDukeEstate`, `TGID`, `letterSound`, `alarmSound`, `timeClick`). Booleans are stored as the strings `'true'`/`'false'`. Driver-specific settings extend the settings form via `LbastUtils.registerCustomSettings(scriptId, {html, saveHandler})`.
+- **Per-session state:** `sessionStorage.lbastAuto_*` — e.g. `playerNickname`, `playerAlignment` (cached by `getPlayerInfo()` to avoid re-fetching), `checkAttempted` (captcha retry guard).
+- **Randomized click delay:** `utils.click(text)` schedules a click with jitter derived from `localStorage.lbastAuto_timeClick` to look human. Use it instead of direct `$(...).click()` in drivers.
+- **Refresh scheduling:** `utils.update(ms)` injects a footer line showing the wait time and reloads `location.php` after `ms`. Drivers multiply `rand * <multiplier>` (where `rand` is 500–1000) to stagger refreshes.
+- **Telegram bot:** `TG_TOKEN` is hardcoded in [lbast_utils.user.js](lbast_utils.user.js); users supply only their chat ID via settings. Alerts go through `sendTGMessage()` which silently no-ops on missing/invalid ID.
+
+### Versioning and release
+
+Each script has a `// @version YYYY.MM.DD` line in its userscript header. Bump it when publishing a change so Tampermonkey offers an update to installed users. Scripts are distributed via GitHub raw URLs on `refs/heads/main`, so merging to main is the "release".
