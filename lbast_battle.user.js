@@ -201,6 +201,9 @@
         }
 
         if($("a:contains('ход соперника')").length) {
+            setTimeout(() => {
+                utils.click('ход соперника');
+            }, 5000);
             return;
         }
 

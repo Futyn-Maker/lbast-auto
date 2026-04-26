@@ -63,7 +63,7 @@ After those checks, the script computes `hasOpponent = $('[name="bl"]').length >
    - If no `<a>` is found → bot opponent (PvE branch). Otherwise → PvP branch with `opponentLink` populated.
 10. **PvE-with-opponent branch** — click "Умение" if present, else "Ударить".
 11. **PvP-with-opponent branch:**
-    - If "ход соперника" (opponent's turn) is on the page, return without action — the page auto-refreshes on its own and we want to suppress the attack alarm + hit logic during the opponent's turn. **This must run before the alarm/poison/hit logic** because while it's the opponent's move, we cannot poison or strike anyway.
+    - If "ход соперника" (opponent's turn) is on the page, schedule `utils.click('ход соперника')` after 5s and return — the in-page `Обновить` countdown does not actually reload, so clicking the wait-link is the only thing that advances state. **This must run before the alarm/poison/hit logic** because while it's the opponent's move, we cannot poison or strike anyway.
     - Otherwise play alarm and TG-notify "На вас напали!".
     - Fetch the opponent profile (sync XHR to `opponentLink.attr('href')`) and look for drink states (раздничный эль, брага, водка, вино преми, коньяк, лимонад) that indicate the opponent is drunk/poisonable.
     - If poisonable: GET `arena_go.php?r=7241&mod=invaction` to open inventory, check for "Эликсир отравления"; if present, GET the use-elixir URL (`r=6074&mod=invaction_el_otravleniya`) and click "Обновить" after 5s.
