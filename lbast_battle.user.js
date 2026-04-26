@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_battle
 // @namespace    http://tampermonkey.net/
-// @version      2026.04.26
+// @version      2026.04.27
 // @author       Agent_
 // @include      *auto.lbast.ru/arena_go*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -10,6 +10,289 @@
 
 (function () {
   "use strict";
+
+  // ===== Captcha module =====
+  const POLLINATIONS_ENDPOINT = "https://text.pollinations.ai/openai";
+
+  const AI_SYSTEM_PROMPT =
+    "Ты — автоматический решатель простых проверочных заданий (анти-бот капчи) " +
+    "в браузерной онлайн-игре. Тебе передают текст задания на русском языке. " +
+    "Если в задании явно не сказано иное, ответом всегда является целое число. " +
+    "Ответь ТОЛЬКО самим ответом — без слов, единиц измерения, знаков препинания, " +
+    "кавычек, пояснений и рассуждений.";
+
+  function isCaptchaPage(html) {
+    return (
+      html.indexOf("Для продолжения боя ответьте на вопрос") > -1 ||
+      /<input[^>]*name=["']anumb["']/i.test(html)
+    );
+  }
+
+  function extractCaptchaQuestion(html) {
+    const m = html.match(
+      /Для продолжения боя ответьте на вопрос:\s*(?:<br\s*\/?>\s*)+([^<]+?)\s*<br/i,
+    );
+    return m ? m[1].trim() : null;
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function compute(a, op, b) {
+    if (op === "+") return a + b;
+    if (op === "-") return a - b;
+    if (op === "*") return a * b;
+    if (op === "/") return b !== 0 ? a / b : null;
+    return null;
+  }
+
+  function solveCaptchaWithRules(question) {
+    if (!question) return null;
+    const q = question.toLowerCase();
+
+    const symMatch = question.match(/(-?\d+)\s*([+\-*\/×÷−])\s*(-?\d+)/);
+    if (symMatch) {
+      let op = symMatch[2];
+      if (op === "×") op = "*";
+      if (op === "÷") op = "/";
+      if (op === "−") op = "-";
+      const r = compute(
+        parseInt(symMatch[1], 10),
+        op,
+        parseInt(symMatch[3], 10),
+      );
+      if (r !== null && Number.isFinite(r)) return r;
+    }
+
+    const wordOps = [
+      { rx: /(?<!\p{L})(?:плюс|прибав\p{L}*)(?!\p{L})/u, op: "+" },
+      {
+        rx: /(?<!\p{L})(?:минус|отним\p{L}*|отня\p{L}*|выч[еи]\p{L}*)(?!\p{L})/u,
+        op: "-",
+      },
+      { rx: /(?<!\p{L})(?:умнож\p{L}*|помнож\p{L}*)(?!\p{L})/u, op: "*" },
+      { rx: /(?<!\p{L})(?:раздел\p{L}*|подел\p{L}*)(?!\p{L})/u, op: "/" },
+    ];
+    for (const w of wordOps) {
+      if (w.rx.test(q)) {
+        const nums = question.match(/-?\d+/g);
+        if (nums && nums.length >= 2) {
+          const r = compute(parseInt(nums[0], 10), w.op, parseInt(nums[1], 10));
+          if (r !== null && Number.isFinite(r)) return r;
+        }
+      }
+    }
+
+    if (/(?<!\p{L})(?:число|цифр\p{L}*)(?!\p{L})/u.test(q)) {
+      const m = question.match(/-?\d+/);
+      if (m) return parseInt(m[0], 10);
+    }
+
+    const allNums = question.match(/-?\d+/g);
+    if (
+      allNums &&
+      allNums.length === 1 &&
+      /^[\s\d.,!?;:()-]*$/.test(question)
+    ) {
+      return parseInt(allNums[0], 10);
+    }
+
+    return null;
+  }
+
+  function parseAIAnswer(raw) {
+    if (!raw) return null;
+    const cleaned = String(raw).trim();
+    const m = cleaned.match(/-?\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  }
+
+  function solveCaptchaWithAI(question, nickname) {
+    const userMsg =
+      "Игрок: " +
+      (nickname || "(неизвестно)") +
+      "\nВремя: " +
+      new Date().toISOString() +
+      "\n\nЗадание: " +
+      question;
+
+    const body = JSON.stringify({
+      model: "openai",
+      messages: [
+        { role: "system", content: AI_SYSTEM_PROMPT },
+        { role: "user", content: userMsg },
+      ],
+      temperature: 0.1,
+      reasoning_effort: "low",
+    });
+
+    return fetch(POLLINATIONS_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body,
+    }).then((resp) =>
+      resp.text().then((text) => {
+        if (!resp.ok) {
+          throw new Error("HTTP " + resp.status + ": " + text.slice(0, 200));
+        }
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          throw new Error("Non-JSON response: " + text.slice(0, 200));
+        }
+        const raw =
+          (data &&
+            data.choices &&
+            data.choices[0] &&
+            data.choices[0].message &&
+            data.choices[0].message.content) ||
+          "";
+        return { raw: raw, answer: parseAIAnswer(raw) };
+      }),
+    );
+  }
+
+  function solveCaptchaWithAIRetry(question, nickname) {
+    return new Promise((resolve, reject) => {
+      const errors = [];
+      function attempt(n) {
+        solveCaptchaWithAI(question, nickname)
+          .then((res) => {
+            if (res.answer !== null && Number.isFinite(res.answer)) {
+              resolve(res);
+            } else {
+              errors.push(
+                "попытка " + n + ': нераспознанный ответ "' + res.raw + '"',
+              );
+              if (n < 3) {
+                setTimeout(() => attempt(n + 1), 5000);
+              } else {
+                reject(new Error(errors.join("; ")));
+              }
+            }
+          })
+          .catch((err) => {
+            errors.push("попытка " + n + ": " + ((err && err.message) || err));
+            if (n < 3) {
+              setTimeout(() => attempt(n + 1), 5000);
+            } else {
+              reject(new Error(errors.join("; ")));
+            }
+          });
+      }
+      attempt(1);
+    });
+  }
+
+  function submitCaptchaAnswer(answer) {
+    const delay = 5000 + Math.floor(Math.random() * 3000);
+    setTimeout(() => {
+      $("input[name='anumb']").val(answer);
+      setTimeout(
+        () => {
+          $("input[type='submit'][value='далее']").click();
+        },
+        700 + Math.floor(Math.random() * 500),
+      );
+    }, delay);
+  }
+
+  function runAIAttempt(utils, playerInfo, question) {
+    solveCaptchaWithAIRetry(question, playerInfo.nickname)
+      .then((res) => submitCaptchaAnswer(res.answer))
+      .catch((err) => {
+        utils.sendTGMessage(
+          "ИИ не справился с проверкой: " +
+            escapeHtml(String((err && err.message) || err)) +
+            ". Не удалось пройти проверку автоматически. Из " +
+            location.hostname,
+        );
+        sessionStorage.lbastAuto_checkAttempted = "failed";
+        setTimeout(() => location.reload(), 15000);
+      });
+  }
+
+  function handleCaptcha(utils, playerInfo) {
+    const state = sessionStorage.lbastAuto_checkAttempted;
+
+    if (state === "failed") {
+      setTimeout(() => location.reload(), 15000);
+      return;
+    }
+
+    if (state === "ai") {
+      utils.sendTGMessage(
+        "Не удалось пройти проверку автоматически: ответ ИИ оказался неверным. Из " +
+          location.hostname,
+      );
+      sessionStorage.lbastAuto_checkAttempted = "failed";
+      setTimeout(() => location.reload(), 15000);
+      return;
+    }
+
+    const html = document.body.innerHTML;
+    const question = extractCaptchaQuestion(html);
+    const safeQuestion = question
+      ? escapeHtml(question)
+      : "(не удалось извлечь)";
+
+    if (state === "rules") {
+      utils.sendTGMessage(
+        "Ответ по правилам оказался неверным. Пробую через ИИ. Из " +
+          location.hostname,
+      );
+      if (!question) {
+        utils.sendTGMessage(
+          "Не удалось извлечь вопрос для повторной попытки. Из " +
+            location.hostname,
+        );
+        sessionStorage.lbastAuto_checkAttempted = "failed";
+        setTimeout(() => location.reload(), 15000);
+        return;
+      }
+      sessionStorage.lbastAuto_checkAttempted = "ai";
+      runAIAttempt(utils, playerInfo, question);
+      return;
+    }
+
+    utils.playSound("alarm");
+    utils.sendTGMessage(
+      "Проверка на автокач! Пытаюсь пройти автоматически по правилам.\n" +
+        "Вопрос: " +
+        safeQuestion +
+        "\nИз " +
+        location.hostname,
+    );
+
+    if (!question) {
+      utils.sendTGMessage(
+        "Не удалось извлечь вопрос проверки. Из " + location.hostname,
+      );
+      sessionStorage.lbastAuto_checkAttempted = "failed";
+      setTimeout(() => location.reload(), 15000);
+      return;
+    }
+
+    const ruleAnswer = solveCaptchaWithRules(question);
+    if (ruleAnswer !== null && Number.isFinite(ruleAnswer)) {
+      sessionStorage.lbastAuto_checkAttempted = "rules";
+      submitCaptchaAnswer(ruleAnswer);
+      return;
+    }
+
+    utils.sendTGMessage(
+      "Правила не нашли ответ на вопрос. Пробую через ИИ. Из " +
+        location.hostname,
+    );
+    sessionStorage.lbastAuto_checkAttempted = "ai";
+    runAIAttempt(utils, playerInfo, question);
+  }
+  // ===== End captcha module =====
 
   function findPerPairOpponent(hitForm) {
     if (hitForm.closest("td").length) {
@@ -101,14 +384,17 @@
       delete sessionStorage.lbastAuto_pvpAwaitingTurn;
     }
 
-    if (
-      sessionStorage.lbastAuto_checkAttempted &&
-      !~str.indexOf("Для продолжения боя ответьте на вопрос")
-    ) {
-      utils.sendTGMessage(
-        "Проверка на автокач пройдена автоматически! Из " + location.hostname,
-      );
+    const pageHtml = document.body.innerHTML;
+    const captchaPresent = isCaptchaPage(pageHtml);
+
+    if (sessionStorage.lbastAuto_checkAttempted && !captchaPresent) {
+      const wasFailed = sessionStorage.lbastAuto_checkAttempted === "failed";
       delete sessionStorage.lbastAuto_checkAttempted;
+      if (!wasFailed) {
+        utils.sendTGMessage(
+          "Проверка на автокач пройдена автоматически! Из " + location.hostname,
+        );
+      }
       location.reload();
       return;
     }
@@ -120,78 +406,8 @@
       return;
     }
 
-    if (~str.indexOf("Для продолжения боя ответьте на вопрос")) {
-      if (sessionStorage.lbastAuto_checkAttempted) {
-        utils.playSound("alarm");
-        utils.sendTGMessage(
-          "Проверка на автокач! Не удалось пройти автоматически. Из " +
-            location.hostname,
-        );
-        setTimeout(() => {
-          location.reload();
-        }, 15000);
-        return;
-      }
-
-      utils.playSound("alarm");
-      utils.sendTGMessage(
-        "Проверка на автокач! Пытаюсь пройти автоматически... Из " +
-          location.hostname,
-      );
-      sessionStorage.lbastAuto_checkAttempted = "true";
-
-      try {
-        const html = document.body.innerHTML;
-        const questionMatch = html.match(
-          /Для продолжения боя ответьте на вопрос:<br><br>([^<]+)<br>/,
-        );
-        utils.sendTGMessage(
-          "Вопрос: " + questionMatch + "\nИз " + location.hostname,
-        );
-
-        if (!questionMatch || !questionMatch[1]) {
-          throw new Error("Couldn't extract question");
-        }
-
-        const question = questionMatch[1].trim().replace(/\s+/g, "");
-        let operator, leftOperand, rightOperand, result;
-
-        if (~question.indexOf("+")) {
-          operator = "+";
-          [leftOperand, rightOperand] = question.split("+");
-          result = parseInt(leftOperand) + parseInt(rightOperand);
-        } else if (~question.indexOf("-")) {
-          operator = "-";
-          [leftOperand, rightOperand] = question.split("-");
-          result = parseInt(leftOperand) - parseInt(rightOperand);
-        } else if (~question.indexOf("*")) {
-          operator = "*";
-          [leftOperand, rightOperand] = question.split("*");
-          result = parseInt(leftOperand) * parseInt(rightOperand);
-        } else {
-          throw new Error("Couldn't identify operator");
-        }
-
-        if (isNaN(result)) {
-          throw new Error("Calculation error");
-        }
-
-        const delay = 7000 + Math.floor(Math.random() * 8000);
-        setTimeout(() => {
-          $("input[name='anumb']").val(result);
-          setTimeout(
-            () => {
-              $("input[type='submit'][value='далее']").click();
-            },
-            700 + Math.floor(Math.random() * 500),
-          );
-        }, delay);
-      } catch (e) {
-        console.error("Auto-check failed:", e);
-        setTimeout(() => {
-          location.reload();
-        }, 5000);
-      }
+    if (captchaPresent) {
+      handleCaptcha(utils, playerInfo);
       return;
     }
 
