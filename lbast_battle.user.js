@@ -69,6 +69,18 @@
     );
   }
 
+  function scheduleDelayedHit() {
+    setTimeout(() => {
+      const hitButton = $(
+        "input[value='Бить'], input[type='image'][src*='boj_hit.gif']",
+      );
+      if (hitButton.length) {
+        sessionStorage.lbastAuto_pvpAwaitingTurn = "true";
+        hitButton.click();
+      }
+    }, 90000);
+  }
+
   function initScript() {
     if (!window.LbastUtils || !window.LbastUtils.ready) {
       document.body.innerHTML =
@@ -83,6 +95,10 @@
     const playerInfo = utils.getPlayerInfo();
     if (!playerInfo || !playerInfo.nickname) {
       return;
+    }
+
+    if (!$("a:contains('ход соперника')").length) {
+      delete sessionStorage.lbastAuto_pvpAwaitingTurn;
     }
 
     if (
@@ -204,6 +220,15 @@
     const hasOpponent = hitForm.length > 0;
 
     if (!hasOpponent) {
+      if (
+        sessionStorage.lbastAuto_pvpAwaitingTurn &&
+        $("a:contains('ход соперника')").length
+      ) {
+        setTimeout(() => {
+          utils.click("ход соперника");
+        }, 5000);
+        return;
+      }
       if ($("a:contains('Ударить')").length) {
         utils.click("Ударить");
         return;
@@ -229,13 +254,6 @@
       } else if ($("a:contains('Ударить')").length) {
         utils.click("Ударить");
       }
-      return;
-    }
-
-    if ($("a:contains('ход соперника')").length) {
-      setTimeout(() => {
-        utils.click("ход соперника");
-      }, 5000);
       return;
     }
 
@@ -279,25 +297,11 @@
               }, 5000);
             }, 1500);
           } else {
-            setTimeout(() => {
-              const hitButton = $(
-                "input[value='Бить'], input[type='image'][src*='boj_hit.gif']",
-              );
-              if (hitButton.length) {
-                hitButton.click();
-              }
-            }, 90000);
+            scheduleDelayedHit();
           }
         }, 1500);
       } else {
-        setTimeout(() => {
-          const hitButton = $(
-            "input[value='Бить'], input[type='image'][src*='boj_hit.gif']",
-          );
-          if (hitButton.length) {
-            hitButton.click();
-          }
-        }, 90000);
+        scheduleDelayedHit();
       }
     }, 0);
   }

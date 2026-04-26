@@ -42,7 +42,7 @@ All bot drivers follow the same `if/else if` chain pattern against `$("body").te
 [lbast_battle.user.js](lbast_battle.user.js) runs on every `arena_go*` page under any `*auto.lbast.ru` subdomain and follows its own `if/else if` chain against `$("body").text()` plus a few DOM checks. The first six steps are the universal pre-dispatch checks; only after those does the script branch on battle type.
 
 1. Guard: require `window.LbastUtils.ready`; otherwise show the "install utils" message.
-2. Bail out silently if `getPlayerInfo()` returns no nickname (defensive — guarantees session info is reachable before doing anything).
+2. Bail out silently if `getPlayerInfo()` returns no nickname (defensive — guarantees session info is reachable before doing anything). Then, if no `ход соперника` link is on the page, clear `sessionStorage.lbastAuto_pvpAwaitingTurn` — this is the only place the flag is ever cleared. The flag is set in step 11 right before the 90s strike fires and consumed in step 8 to recognize the single-PvP awaiting-turn state where the hit form has disappeared. Clearing here means the flag survives any reload that doesn't change the situation (the user stays on the awaiting-turn page through the 5s click loop) but drops the instant the link is gone (opponent moved, battle ended, etc.).
 3. **Captcha success check** — if `sessionStorage.lbastAuto_checkAttempted` is set **and** the "Для продолжения боя ответьте на вопрос" text is gone, notify via TG that the captcha was passed, clear the flag, reload.
 4. **"Другой IP"** — the user opened the game on another device: schedule a 5-minute `location.php` jump and return (the driver will refresh from there).
 5. **Captcha present** ("Для продолжения боя ответьте на вопрос"):
@@ -53,7 +53,8 @@ All bot drivers follow the same `if/else if` chain pattern against `$("body").te
 
 After those checks, the script computes `hasOpponent = $('[name="bl"]').length > 0` (presence of the hit form's block-selector) and dispatches:
 
-8. **No opponent** (`hasOpponent === false`) — necessarily a group battle of some kind (single battles always have an opponent until cleanup links take over). Three cascaded checks, in order:
+8. **No opponent** (`hasOpponent === false`) — group battles, or single PvP after our strike (the form briefly disappears while we wait for the opponent's move). Four cascaded checks, in order:
+   - **Single-PvP awaiting-turn** — if `sessionStorage.lbastAuto_pvpAwaitingTurn` is set and the "ход соперника" link is on the page, schedule `utils.click('ход соперника')` after 5s and return. The flag is what distinguishes "single PvP, our strike landed first" from "group battle, no pair assigned to us" — the wait-link can appear in either (e.g. group PvE after we click "Ударить" without a pair), but we only set the flag on the PvP path in step 11. Without the flag we'd misroute a group-PvE awaiting-turn into the 5s click loop instead of dropping pairs.
    - If the "Ударить" link is present, `utils.click('Ударить')` and return. This commits the user to a hit stance and is what prevents auto-hit in a PvP context (in a bot context it's harmless: as soon as a pair appears, the standard PvE branch fires).
    - Else if the "Сбр.пары" link is present, decide PvP vs bots from the overview via `isOverviewPvp()` (find the first `<br>VS.<br>` in body, scan from the prior boundary — `</div>`, `<hr`, or `<center>` — for any `<a>` element). If PvP, `refreshSoon()` (1000–1500 ms `location.reload()`); if bots, `utils.click('Сбр.пары')`.
    - Else `refreshSoon()`.
@@ -63,22 +64,23 @@ After those checks, the script computes `hasOpponent = $('[name="bl"]').length >
    - If no `<a>` is found → bot opponent (PvE branch). Otherwise → PvP branch with `opponentLink` populated.
 10. **PvE-with-opponent branch** — click "Умение" if present, else "Ударить".
 11. **PvP-with-opponent branch:**
-    - If "ход соперника" (opponent's turn) is on the page, schedule `utils.click('ход соперника')` after 5s and return — the in-page `Обновить` countdown does not actually reload, so clicking the wait-link is the only thing that advances state. **This must run before the alarm/poison/hit logic** because while it's the opponent's move, we cannot poison or strike anyway.
-    - Otherwise play alarm and TG-notify "На вас напали!".
+    - Play alarm and TG-notify "На вас напали!".
     - Fetch the opponent profile (sync XHR to `opponentLink.attr('href')`) and look for drink states (раздничный эль, брага, водка, вино преми, коньяк, лимонад) that indicate the opponent is drunk/poisonable.
     - If poisonable: GET `arena_go.php?r=7241&mod=invaction` to open inventory, check for "Эликсир отравления"; if present, GET the use-elixir URL (`r=6074&mod=invaction_el_otravleniya`) and click "Обновить" after 5s.
-    - If no poison (or no drink state): wait 90s, then click the hit button (`input[value='Бить']` or the image-input fallback).
+    - If no poison (or no drink state): `scheduleDelayedHit()` — wait 90s, then set `sessionStorage.lbastAuto_pvpAwaitingTurn = 'true'` and click the hit button (`input[value='Бить']` or the image-input fallback). The flag is set inside the timer immediately before `.click()` and gated on the button existing, so a mid-wait reload that cancels the timer leaves no stale flag. The next page load — where the form has disappeared and "ход соперника" is showing — picks the flag up in step 8's awaiting-turn branch. There is no in-branch handler for the "ход соперника" link here because once we have struck, the form is gone and `hasOpponent` is false; that case is handled exclusively by step 8 + the flag.
 
 **Critical:**
+
 - The captcha handler is single-shot per page load, gated by `sessionStorage.lbastAuto_checkAttempted`. Any rework must preserve that flag so a silently-failing solve attempt doesn't loop. The 90s PvP delay and 7–15s captcha delay are deliberately human-paced — do not tighten them.
 - `hasOpponent` must be tested via `[name="bl"]` (the hit form), not via the "Ударить" link. In PvE the "Ударить" link is always present regardless of whether a pair exists, so it is not a reliable opponent signal.
 - The "no opponent" branch uses `location.reload()` directly (via `refreshSoon()`), not `utils.update()`, because `utils.update()` jumps to `/location.php` and would break the wait-for-pair flow.
 - The locator's mobile fallback depends on the per-pair line being immediately adjacent to the form, separated by exactly one `<hr>`. The "warrior row at top vs bottom" mobile setting moves the **group overview**, not the per-pair line — so the second-`<hr>` boundary still cleanly separates the two regardless of that setting.
+- The `pvpAwaitingTurn` flag is **set in exactly one place** (inside `scheduleDelayedHit()` right before `hitButton.click()`) and **cleared in exactly one place** (top of `initScript()` when `ход соперника` is absent from the page). Do not duplicate either side — the design intentionally consolidates the lifecycle so the flag survives every reload that doesn't change the situation and drops the moment it does. Note that "ход соперника" can appear in group PvE / group PvP after the user clicks "Ударить" without a pair; we never set the flag on those paths, so the no-opponent branch correctly falls through to `Сбр.пары` / `refreshSoon()` instead of looping the wait-link click.
 
 ### State and side-effect conventions
 
 - **Settings persistence:** all user settings go in `localStorage.lbastAuto_*` keys (`goHP`, `houseHP`, `useDukeEstate`, `TGToken`, `TGID`, `letterSound`, `alarmSound`, `timeClick`). Booleans are stored as the strings `'true'`/`'false'`. Driver-specific settings extend the settings form via `LbastUtils.registerCustomSettings(scriptId, {html, saveHandler})`.
-- **Per-session state:** `sessionStorage.lbastAuto_*` — e.g. `playerNickname`, `playerAlignment` (cached by `getPlayerInfo()` to avoid re-fetching), `checkAttempted` (captcha retry guard).
+- **Per-session state:** `sessionStorage.lbastAuto_*` — e.g. `playerNickname`, `playerAlignment` (cached by `getPlayerInfo()` to avoid re-fetching), `checkAttempted` (captcha retry guard), `pvpAwaitingTurn` (set when our PvP strike fires; used to recognize the awaiting-turn page after the hit form disappears).
 - **Randomized click delay:** `utils.click(text)` schedules a click with jitter derived from `localStorage.lbastAuto_timeClick` to look human. Use it instead of direct `$(...).click()` in drivers.
 - **Refresh scheduling:** `utils.update(ms)` injects a footer line showing the wait time and reloads `location.php` after `ms`. Drivers multiply `rand * <multiplier>` (where `rand` is 500–1000) to stagger refreshes.
 - **Telegram bot:** each user creates their own bot via @BotFather and stores the token in `localStorage.lbastAuto_TGToken`. There is no shared/hardcoded token. The chat ID is stored in `localStorage.lbastAuto_TGID`. Because localStorage is per-subdomain, users running multiple auto-catchers must enter the token and ID in each one's settings separately. Alerts go through `sendTGMessage()` which silently no-ops when the token or ID is missing/invalid.
