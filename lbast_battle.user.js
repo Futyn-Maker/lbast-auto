@@ -1,7 +1,7 @@
-﻿// ==UserScript==
+// ==UserScript==
 // @name         lbast_battle
 // @namespace    http://tampermonkey.net/
-// @version      2025.10.01
+// @version      2026.04.26
 // @author       Agent_
 // @include      *auto.lbast.ru/arena_go*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -10,6 +10,52 @@
 
 (function() {
     'use strict';
+
+    function findPerPairOpponent(hitForm) {
+        if(hitForm.closest('td').length) {
+            const lastCell = hitForm.closest('tr').children('td').last();
+            const link = lastCell.find('a').filter(function() {
+                return /^[A-Za-z0-9_]+$/.test($(this).text().trim());
+            }).first();
+            return link.length ? link : null;
+        }
+
+        let node = hitForm.get(0).previousSibling;
+        let hrCount = 0;
+        while(node) {
+            if(node.nodeType === 1 && node.tagName === 'HR') {
+                hrCount++;
+                if(hrCount === 2) break;
+            } else if(node.nodeType === 1 && node.tagName === 'A') {
+                const text = (node.textContent || '').trim();
+                if(/^[A-Za-z0-9_]+$/.test(text)) {
+                    return $(node);
+                }
+            }
+            node = node.previousSibling;
+        }
+        return null;
+    }
+
+    function isOverviewPvp() {
+        const html = document.body.innerHTML;
+        const vsIdx = html.indexOf('<br>VS.<br>');
+        if(vsIdx === -1) return false;
+
+        const before = html.substring(0, vsIdx);
+        let sliceStart = 0;
+        for(const marker of ['</div>', '<hr', '<center>']) {
+            const idx = before.lastIndexOf(marker);
+            if(idx > sliceStart) sliceStart = idx;
+        }
+        return /<a[\s>]/.test(html.substring(sliceStart, vsIdx));
+    }
+
+    function refreshSoon() {
+        setTimeout(() => {
+            location.reload();
+        }, 1000 + Math.floor(Math.random() * 500));
+    }
 
     function initScript() {
         if(!window.LbastUtils || !window.LbastUtils.ready) {
@@ -25,7 +71,6 @@
         if(!playerInfo || !playerInfo.nickname) {
             return;
         }
-        const playerNickname = playerInfo.nickname;
 
         if(sessionStorage.lbastAuto_checkAttempted && !~str.indexOf('Для продолжения боя ответьте на вопрос')) {
             utils.sendTGMessage('Проверка на автокач пройдена автоматически! Из ' + location.hostname);
@@ -59,7 +104,7 @@
                 const html = document.body.innerHTML;
                 const questionMatch = html.match(/Для продолжения боя ответьте на вопрос:<br><br>([^<]+)<br>/);
                 utils.sendTGMessage('Вопрос: ' + questionMatch + '\nИз ' + location.hostname);
-                
+
                 if(!questionMatch || !questionMatch[1]) {
                     throw new Error("Couldn't extract question");
                 }
@@ -121,20 +166,32 @@
             return;
         }
 
-        const isGroupPveBattle = ~str.indexOf('Левиафан') || ~str.indexOf('Призрак ворот') || ~str.indexOf('Дух заставы');
-        const playerNickLink = $('a').filter(function() {
-            return /^[a-zA-Z0-9_]+$/.test($(this).text()) && $(this).text() !== playerNickname;
+        const hitForm = $('form').filter(function() {
+            return $(this).find('[name="bl"]').length > 0;
         }).first();
-        const isPvpBattle = !isGroupPveBattle && playerNickLink.length > 0;
+        const hasOpponent = hitForm.length > 0;
 
-        if(isGroupPveBattle) {
-            setTimeout(() => {
-                location.href = location.origin + '/arena_go.php';
-            }, 60000);
+        if(!hasOpponent) {
+            if($("a:contains('Ударить')").length) {
+                utils.click('Ударить');
+                return;
+            }
+            if($("a:contains('Сбр.пары')").length) {
+                if(isOverviewPvp()) {
+                    refreshSoon();
+                } else {
+                    utils.click('Сбр.пары');
+                }
+                return;
+            }
+            refreshSoon();
             return;
         }
 
-        if(!isPvpBattle) {
+        const opponentLink = findPerPairOpponent(hitForm);
+        const isPvp = opponentLink !== null;
+
+        if(!isPvp) {
             if($("a:contains('Умение')").length) {
                 utils.click('Умение');
             } else if($("a:contains('Ударить')").length) {
@@ -144,9 +201,6 @@
         }
 
         if($("a:contains('ход соперника')").length) {
-            setTimeout(() => {
-                utils.click('ход соперника');
-            }, 5000);
             return;
         }
 
@@ -154,12 +208,12 @@
         utils.sendTGMessage('На вас напали! Из ' + location.hostname);
 
         setTimeout(() => {
-            xhr.open('GET', playerNickLink.attr('href'), false);
+            xhr.open('GET', opponentLink.attr('href'), false);
             xhr.send();
             const playerStatus = xhr.responseText;
 
-            const needsPoison = ~playerStatus.indexOf('раздничный эль') || ~playerStatus.indexOf('рага') || 
-                               ~playerStatus.indexOf('одка') || ~playerStatus.indexOf('вино преми') || 
+            const needsPoison = ~playerStatus.indexOf('раздничный эль') || ~playerStatus.indexOf('рага') ||
+                               ~playerStatus.indexOf('одка') || ~playerStatus.indexOf('вино преми') ||
                                ~playerStatus.indexOf('оньяк') || ~playerStatus.indexOf('имонад');
 
             if(needsPoison) {

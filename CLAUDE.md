@@ -39,10 +39,10 @@ All bot drivers follow the same `if/else if` chain pattern against `$("body").te
 
 ### Battle script control flow
 
-[lbast_battle.user.js](lbast_battle.user.js) runs on every `arena_go*` page under any `*auto.lbast.ru` subdomain and follows its own `if/else if` chain against `$("body").text()` plus a few DOM checks:
+[lbast_battle.user.js](lbast_battle.user.js) runs on every `arena_go*` page under any `*auto.lbast.ru` subdomain and follows its own `if/else if` chain against `$("body").text()` plus a few DOM checks. The first six steps are the universal pre-dispatch checks; only after those does the script branch on battle type.
 
 1. Guard: require `window.LbastUtils.ready`; otherwise show the "install utils" message.
-2. Fetch `playerNickname` via `getPlayerInfo()`; bail out silently if unavailable (needed later to distinguish PvP).
+2. Bail out silently if `getPlayerInfo()` returns no nickname (defensive — guarantees session info is reachable before doing anything).
 3. **Captcha success check** — if `sessionStorage.lbastAuto_checkAttempted` is set **and** the "Для продолжения боя ответьте на вопрос" text is gone, notify via TG that the captcha was passed, clear the flag, reload.
 4. **"Другой IP"** — the user opened the game on another device: schedule a 5-minute `location.php` jump and return (the driver will refresh from there).
 5. **Captcha present** ("Для продолжения боя ответьте на вопрос"):
@@ -50,17 +50,30 @@ All bot drivers follow the same `if/else if` chain pattern against `$("body").te
    - Otherwise: play alarm, TG-notify that an attempt is starting, set `checkAttempted = 'true'`, extract the arithmetic expression from the HTML (`/Для продолжения боя.../` regex), TG-send the raw question for visibility, detect `+`/`-`/`*`, compute the result, wait a randomized 7–15s, fill `input[name='anumb']`, then click `input[type='submit'][value='далее']` after another short delay. On any thrown error, reload after 5s.
 6. **"автобан"** — schedule a 7.5s reload and return.
 7. **"ернуться" / "ой завершен"** links — click them (battle cleanup states).
-8. **Group PvE detection** — body contains "Левиафан", "Призрак ворот", or "Дух заставы": jump back to `arena_go.php` after 60s and return. No per-turn logic for these.
-9. **PvP detection** — find the first anchor whose text is a `[A-Za-z0-9_]+` nickname that differs from `playerNickname`. If none, it's PvE.
-10. **PvE branch** — click "Умение" (skill) if present, else "Ударить" (hit).
-11. **PvP branch:**
-    - If "ход соперника" (opponent's turn) is on the page, click it after 5s to advance and return.
+
+After those checks, the script computes `hasOpponent = $('[name="bl"]').length > 0` (presence of the hit form's block-selector) and dispatches:
+
+8. **No opponent** (`hasOpponent === false`) — necessarily a group battle of some kind (single battles always have an opponent until cleanup links take over). Three cascaded checks, in order:
+   - If the "Ударить" link is present, `utils.click('Ударить')` and return. This commits the user to a hit stance and is what prevents auto-hit in a PvP context (in a bot context it's harmless: as soon as a pair appears, the standard PvE branch fires).
+   - Else if the "Сбр.пары" link is present, decide PvP vs bots from the overview via `isOverviewPvp()` (find the first `<br>VS.<br>` in body, scan from the prior boundary — `</div>`, `<hr`, or `<center>` — for any `<a>` element). If PvP, `refreshSoon()` (1000–1500 ms `location.reload()`); if bots, `utils.click('Сбр.пары')`.
+   - Else `refreshSoon()`.
+9. **Has opponent** — locate the per-pair opponent via `findPerPairOpponent(hitForm)`:
+   - **Desktop** (`hitForm.closest('td').length > 0`): the opponent is in the last `<td>` of the form's `<tr>`. Look for an `<a>` whose text matches `^[A-Za-z0-9_]+$`.
+   - **Mobile**: walk DOM siblings backwards from the form, skip the first `<hr>` (the one immediately above the form), and look for the first nickname-text `<a>` before hitting a second `<hr>` (the upper boundary of the per-pair line). The second-`<hr>` boundary is what excludes any group-overview `<a>` above the per-pair line.
+   - If no `<a>` is found → bot opponent (PvE branch). Otherwise → PvP branch with `opponentLink` populated.
+10. **PvE-with-opponent branch** — click "Умение" if present, else "Ударить".
+11. **PvP-with-opponent branch:**
+    - If "ход соперника" (opponent's turn) is on the page, return without action — the page auto-refreshes on its own and we want to suppress the attack alarm + hit logic during the opponent's turn. **This must run before the alarm/poison/hit logic** because while it's the opponent's move, we cannot poison or strike anyway.
     - Otherwise play alarm and TG-notify "На вас напали!".
-    - Fetch the opponent profile (sync XHR to their link) and look for drink states (раздничный эль, брага, водка, вино преми, коньяк, лимонад) that indicate the opponent is drunk/poisonable.
+    - Fetch the opponent profile (sync XHR to `opponentLink.attr('href')`) and look for drink states (раздничный эль, брага, водка, вино преми, коньяк, лимонад) that indicate the opponent is drunk/poisonable.
     - If poisonable: GET `arena_go.php?r=7241&mod=invaction` to open inventory, check for "Эликсир отравления"; if present, GET the use-elixir URL (`r=6074&mod=invaction_el_otravleniya`) and click "Обновить" after 5s.
     - If no poison (or no drink state): wait 90s, then click the hit button (`input[value='Бить']` or the image-input fallback).
 
-**Critical:** the captcha handler is single-shot per page load, gated by `sessionStorage.lbastAuto_checkAttempted`. Any rework must preserve that flag so a silently-failing solve attempt doesn't loop. The 90s PvP delay and 7–15s captcha delay are deliberately human-paced — do not tighten them.
+**Critical:**
+- The captcha handler is single-shot per page load, gated by `sessionStorage.lbastAuto_checkAttempted`. Any rework must preserve that flag so a silently-failing solve attempt doesn't loop. The 90s PvP delay and 7–15s captcha delay are deliberately human-paced — do not tighten them.
+- `hasOpponent` must be tested via `[name="bl"]` (the hit form), not via the "Ударить" link. In PvE the "Ударить" link is always present regardless of whether a pair exists, so it is not a reliable opponent signal.
+- The "no opponent" branch uses `location.reload()` directly (via `refreshSoon()`), not `utils.update()`, because `utils.update()` jumps to `/location.php` and would break the wait-for-pair flow.
+- The locator's mobile fallback depends on the per-pair line being immediately adjacent to the form, separated by exactly one `<hr>`. The "warrior row at top vs bottom" mobile setting moves the **group overview**, not the per-pair line — so the second-`<hr>` boundary still cleanly separates the two regardless of that setting.
 
 ### State and side-effect conventions
 
