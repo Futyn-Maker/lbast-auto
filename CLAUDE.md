@@ -12,7 +12,7 @@ This repo is a collection of Tampermonkey/Greasemonkey userscripts that automate
 
 Scripts split into **shared infrastructure** (loaded on every auto-kach subdomain) and **per-bot driver scripts** (loaded on one subdomain each):
 
-- [lbast_utils.user.js](lbast_utils.user.js) — shared library. Exposes `window.LbastUtils` with `click`, `send`, `update`, `playSound`, `sendTGMessage`, `parseHP`, `getPlayerInfo`, plus the settings-page renderer. Also owns `localStorage.lbastAuto_*` settings (HP thresholds, Telegram ID, click delay, sound toggles, duke-estate flag) and the `HOMETOWN` map (`light`/`dark`/`sarimat`/`neutral` → location id). Fires a `LbastUtilsReady` event and sets `window.LbastUtils.ready = true` once loaded.
+- [lbast_utils.user.js](lbast_utils.user.js) — shared library. Exposes `window.LbastUtils` with `click`, `send`, `update`, `playSound`, `sendTGMessage`, `parseHP`, `getPlayerInfo`, plus the settings-page renderer. Also owns `localStorage.lbastAuto_*` settings (HP thresholds, Telegram token, Telegram ID, click delay, sound toggles, duke-estate flag) and the `HOMETOWN` map (`light`/`dark`/`sarimat`/`neutral` → location id). Fires a `LbastUtilsReady` event and sets `window.LbastUtils.ready = true` once loaded.
 - [lbast_battle.user.js](lbast_battle.user.js) — shared combat handler. `@include *auto.lbast.ru/arena_go*`, so it runs inside any bot's arena page. Handles the anti-autokach captcha, Другой IP cooldown, PvE skill-then-hit loop, group PvE refresh, and PvP response (sound + TG alert + optional poison elixir + 90s hit loop).
 - Per-bot drivers — `lbast_baron`, `lbast_bleyk`, `lbast_gnom`, `lbast_gorgulya`, `lbast_moleg`, `lbast_paladin`, `lbast_volki`. Each `@include`s its own `*-auto.lbast.ru/loc*`, `/rudnik*`, and `/settings*` paths.
 
@@ -64,11 +64,11 @@ All bot drivers follow the same `if/else if` chain pattern against `$("body").te
 
 ### State and side-effect conventions
 
-- **Settings persistence:** all user settings go in `localStorage.lbastAuto_*` keys (`goHP`, `houseHP`, `useDukeEstate`, `TGID`, `letterSound`, `alarmSound`, `timeClick`). Booleans are stored as the strings `'true'`/`'false'`. Driver-specific settings extend the settings form via `LbastUtils.registerCustomSettings(scriptId, {html, saveHandler})`.
+- **Settings persistence:** all user settings go in `localStorage.lbastAuto_*` keys (`goHP`, `houseHP`, `useDukeEstate`, `TGToken`, `TGID`, `letterSound`, `alarmSound`, `timeClick`). Booleans are stored as the strings `'true'`/`'false'`. Driver-specific settings extend the settings form via `LbastUtils.registerCustomSettings(scriptId, {html, saveHandler})`.
 - **Per-session state:** `sessionStorage.lbastAuto_*` — e.g. `playerNickname`, `playerAlignment` (cached by `getPlayerInfo()` to avoid re-fetching), `checkAttempted` (captcha retry guard).
 - **Randomized click delay:** `utils.click(text)` schedules a click with jitter derived from `localStorage.lbastAuto_timeClick` to look human. Use it instead of direct `$(...).click()` in drivers.
 - **Refresh scheduling:** `utils.update(ms)` injects a footer line showing the wait time and reloads `location.php` after `ms`. Drivers multiply `rand * <multiplier>` (where `rand` is 500–1000) to stagger refreshes.
-- **Telegram bot:** `TG_TOKEN` is hardcoded in [lbast_utils.user.js](lbast_utils.user.js); users supply only their chat ID via settings. Alerts go through `sendTGMessage()` which silently no-ops on missing/invalid ID.
+- **Telegram bot:** each user creates their own bot via @BotFather and stores the token in `localStorage.lbastAuto_TGToken`. There is no shared/hardcoded token. The chat ID is stored in `localStorage.lbastAuto_TGID`. Because localStorage is per-subdomain, users running multiple auto-catchers must enter the token and ID in each one's settings separately. Alerts go through `sendTGMessage()` which silently no-ops when the token or ID is missing/invalid.
 
 ### Versioning and release
 

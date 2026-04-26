@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_utils
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.25
+// @version      2026.04.26
 // @author       Agent_
 // @include      *auto.lbast.ru/*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -22,8 +22,6 @@
         sarimat: 6,
         neutral: 2
     };
-
-    const TG_TOKEN = '7814020401:AAHYQ3sqz7gtq5ErLaPMj7_BcKDWa274Rzc';
 
     function getPlayerInfo() {
         if(sessionStorage.lbastAuto_playerNickname && sessionStorage.lbastAuto_playerAlignment) {
@@ -126,8 +124,9 @@
 
     function sendTGMessage(message) {
         const chat_id = localStorage.lbastAuto_TGID;
-        if(!isNaN(chat_id) && chat_id > 0) {
-            send(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${chat_id}&text=${encodeURIComponent(message)}&parse_mode=HTML`);
+        const token = localStorage.lbastAuto_TGToken;
+        if(!isNaN(chat_id) && chat_id > 0 && token) {
+            send(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat_id}&text=${encodeURIComponent(message)}&parse_mode=HTML`);
         }
     }
 
@@ -154,12 +153,25 @@
                     </label>
                 </p>
                 <p>Отметьте эту опцию только если ваш титул не ниже герцога и вы приобрели поместье.</p>
+                <p><strong>Настройка Telegram-оповещений</strong></p>
+                <p>Для получения оповещений о письмах, нападениях и проверках на автокач создайте собственного Telegram-бота:</p>
+                <ol>
+                    <li>Откройте <a href="https://t.me/BotFather" target="_blank">@BotFather</a> в Telegram, создайте нового бота командой /newbot и скопируйте полученный токен.</li>
+                    <li>Узнайте свой Telegram ID, написав боту <a href="https://t.me/my_id_bot" target="_blank">@my_id_bot</a>.</li>
+                    <li>Напишите своему новому боту /start, чтобы он мог отправлять вам сообщения.</li>
+                </ol>
+                <p>Если вы используете несколько автокачей, токен и ID необходимо указать для каждого из них отдельно в настройках каждого автокача.</p>
                 <p>
-                    <label>Ваш ID в Telegram для получения оповещений о письмах, нападениях и проверках на автокач:
+                    <label>Токен вашего Telegram-бота:
+                        <input id="TGTokenInput" name="TGToken" type="password" autocomplete="off" tabindex="0" value="${localStorage.lbastAuto_TGToken || ''}"/>
+                    </label>
+                    <input type="button" id="TGTokenToggle" value="Показать" tabindex="0" onclick="var i=document.getElementById('TGTokenInput');i.type=i.type==='password'?'text':'password';this.value=i.type==='password'?'Показать':'Скрыть';"/>
+                </p>
+                <p>
+                    <label>Ваш ID в Telegram:
                         <input name="TGID" type="number" min="0" tabindex="0" value="${localStorage.lbastAuto_TGID || ''}"/>
                     </label>
                 </p>
-                <p>Чтобы узнать свой Telegram ID, напишите боту <a href="https://t.me/my_id_bot" target="_blank">@my_id_bot</a>. После этого перейдите в бота <a href="https://t.me/lbast_autobot" target="_blank">@lbast_autobot</a> и напишите ему /start, чтобы активировать оповещения.</p>
                 <p>
                     <label>Воспроизводить звук при получении нового письма
                         <input type="checkbox" name="letterSound" tabindex="0" ${localStorage.lbastAuto_letterSound === 'true' ? 'checked' : ''}/>
@@ -189,6 +201,7 @@
         localStorage.lbastAuto_goHP = form.elements.goHP.value;
         localStorage.lbastAuto_houseHP = form.elements.houseHP.value;
         localStorage.lbastAuto_useDukeEstate = form.elements.useDukeEstate.checked;
+        localStorage.lbastAuto_TGToken = form.elements.TGToken.value;
         localStorage.lbastAuto_TGID = form.elements.TGID.value;
         localStorage.lbastAuto_letterSound = form.elements.letterSound.checked;
         localStorage.lbastAuto_alarmSound = form.elements.alarmSound.checked;
@@ -228,7 +241,6 @@
 
     window.LbastUtils = {
         SOUNDS,
-        TG_TOKEN,
         HOMETOWN,
         
         click,
