@@ -8,7 +8,7 @@
 // @grant        none
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
     const SOUNDS = {
@@ -24,7 +24,7 @@
     };
 
     function getPlayerInfo() {
-        if(sessionStorage.lbastAuto_playerNickname && sessionStorage.lbastAuto_playerAlignment) {
+        if (sessionStorage.lbastAuto_playerNickname && sessionStorage.lbastAuto_playerAlignment) {
             return {
                 nickname: sessionStorage.lbastAuto_playerNickname,
                 alignment: sessionStorage.lbastAuto_playerAlignment
@@ -38,13 +38,13 @@
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = xhr.responseText;
         const profileLink = $(tempDiv).find("a:contains('Анкета'), a:contains('ПЕРСОНАЖ')").attr('href');
-    
-        if(!profileLink) {
+
+        if (!profileLink) {
             return null;
         }
 
         const nickname = profileLink.match(/blogin=([^&]+)/)[1];
-        if(nickname) {
+        if (nickname) {
             sessionStorage.lbastAuto_playerNickname = nickname;
         }
 
@@ -52,17 +52,17 @@
         xhr.send();
 
         let alignment = null;
-        if(~xhr.responseText.indexOf('Государство: Империя')) {
+        if (~xhr.responseText.indexOf('Государство: Империя')) {
             alignment = 'light';
-        } else if(~xhr.responseText.indexOf('Мировоззрение: темный')) {
+        } else if (~xhr.responseText.indexOf('Мировоззрение: темный')) {
             alignment = 'dark';
-        } else if(~xhr.responseText.indexOf('Государство: Сариматское братство')) {
+        } else if (~xhr.responseText.indexOf('Государство: Сариматское братство')) {
             alignment = 'sarimat';
-        } else if(~xhr.responseText.indexOf('Мировоззрение: нейтрал')) {
+        } else if (~xhr.responseText.indexOf('Мировоззрение: нейтрал')) {
             alignment = 'neutral';
-    }
+        }
 
-        if(alignment) {
+        if (alignment) {
             sessionStorage.lbastAuto_playerAlignment = alignment;
         }
 
@@ -72,19 +72,19 @@
         };
     }
 
-    if(isNaN(localStorage.lbastAuto_timeClick)) {
+    if (isNaN(localStorage.lbastAuto_timeClick)) {
         localStorage.lbastAuto_timeClick = 200;
     }
-    if(isNaN(localStorage.lbastAuto_houseHP)) {
+    if (isNaN(localStorage.lbastAuto_houseHP)) {
         localStorage.lbastAuto_houseHP = -1000;
     }
-    if(localStorage.lbastAuto_letterSound === undefined) {
+    if (localStorage.lbastAuto_letterSound === undefined) {
         localStorage.lbastAuto_letterSound = 'true';
     }
-    if(localStorage.lbastAuto_alarmSound === undefined) {
+    if (localStorage.lbastAuto_alarmSound === undefined) {
         localStorage.lbastAuto_alarmSound = 'true';
     }
-    if(localStorage.lbastAuto_useDukeEstate === undefined) {
+    if (localStorage.lbastAuto_useDukeEstate === undefined) {
         localStorage.lbastAuto_useDukeEstate = 'false';
     }
 
@@ -105,8 +105,8 @@
     }
 
     function update(time) {
-        document.getElementsByTagName('footer')[0].innerHTML += 
-            '<p>Автоматическое обновление произойдёт примерно через ' + 
+        document.getElementsByTagName('footer')[0].innerHTML +=
+            '<p>Автоматическое обновление произойдёт примерно через ' +
             String(Math.floor((time) / 60000)) + ' минут.</p>';
         setTimeout(() => {
             location.href = location.origin + '/location.php';
@@ -114,8 +114,8 @@
     }
 
     function playSound(type, check = true) {
-        if(!check || (localStorage.lbastAuto_letterSound === 'true' && type === 'letter') ||
-                    (localStorage.lbastAuto_alarmSound === 'true' && type === 'alarm')) {
+        if (!check || (localStorage.lbastAuto_letterSound === 'true' && type === 'letter') ||
+            (localStorage.lbastAuto_alarmSound === 'true' && type === 'alarm')) {
             const audio = document.createElement('audio');
             audio.src = SOUNDS[type];
             audio.play();
@@ -125,13 +125,13 @@
     function sendTGMessage(message) {
         const chat_id = localStorage.lbastAuto_TGID;
         const token = localStorage.lbastAuto_TGToken;
-        if(!isNaN(chat_id) && chat_id > 0 && token) {
+        if (!isNaN(chat_id) && chat_id > 0 && token) {
             send(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat_id}&text=${encodeURIComponent(message)}&parse_mode=HTML`);
         }
     }
 
     function renderSettings() {
-        if(!location.href.includes('/settings')) return;
+        if (!location.href.includes('/settings')) return;
 
         document.body.innerHTML = `
             <h1>Настройки автокача</h1>
@@ -160,7 +160,7 @@
                     <li>Узнайте свой Telegram ID, написав боту <a href="https://t.me/my_id_bot" target="_blank">@my_id_bot</a>.</li>
                     <li>Напишите своему новому боту /start, чтобы он мог отправлять вам сообщения.</li>
                 </ol>
-                <p>Если вы используете несколько автокачей, токен и ID необходимо указать для каждого из них отдельно в настройках каждого автокача.</p>
+                <p>Если вы используете несколько автокачей, токен и ID необходимо указать для каждого из них отдельно в настройках каждого автокача, но вы можете использовать одного бота для всех автокачей и указать одинаковый токен.</p>
                 <p>
                     <label>Токен вашего Telegram-бота:
                         <input id="TGTokenInput" name="TGToken" type="password" autocomplete="off" tabindex="0" value="${localStorage.lbastAuto_TGToken || ''}"/>
@@ -206,8 +206,8 @@
         localStorage.lbastAuto_letterSound = form.elements.letterSound.checked;
         localStorage.lbastAuto_alarmSound = form.elements.alarmSound.checked;
         localStorage.lbastAuto_timeClick = form.elements.timeClick.value;
-        
-        for(const handler of customSaveHandlers) {
+
+        for (const handler of customSaveHandlers) {
             handler(form);
         }
 
@@ -220,20 +220,20 @@
     const customSettings = new Map();
     const customSaveHandlers = new Set();
 
-    function registerCustomSettings(scriptId, {html = '', saveHandler = null} = {}) {
-        if(html) {
+    function registerCustomSettings(scriptId, { html = '', saveHandler = null } = {}) {
+        if (html) {
             customSettings.set(scriptId, html);
             const div = document.getElementById('customSettings');
-            if(div) div.insertAdjacentHTML('beforeend', html);
+            if (div) div.insertAdjacentHTML('beforeend', html);
         }
-        if(saveHandler) {
+        if (saveHandler) {
             customSaveHandlers.add(saveHandler);
         }
     }
 
     function parseHP(str) {
         const match = str.match(/[(❤ )\(] ?-?\d+\//u);
-        if(match) {
+        if (match) {
             return parseInt(match[0].match(/-?\d+/)[0]);
         }
         return null;
@@ -242,7 +242,7 @@
     window.LbastUtils = {
         SOUNDS,
         HOMETOWN,
-        
+
         click,
         send,
         update,
@@ -250,7 +250,7 @@
         sendTGMessage,
         parseHP,
         getPlayerInfo,
-        
+
         renderSettings,
         saveSettings,
         registerCustomSettings
