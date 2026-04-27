@@ -105,8 +105,6 @@ If none match, returns `null` and the AI takes over.
 
 **Submit (`submitCaptchaAnswer`)** — randomized 5–8s wait, then `$("input[name='anumb']").val(answer)`, then 700–1200ms wait, then `.click()` on `input[type='submit'][value='далее']`. The form action reloads the page, which re-enters the state machine on the next load.
 
-**Testing harness:** `testpages/captcha.js` is a CommonJS mirror of the captcha helpers (functions copied verbatim) and `testpages/test_captcha.js` runs detection + extraction + rules against the four `testpages/captcha_*.html` snapshots. AI tests are gated behind `node testpages/test_captcha.js ai <idx>...` and run one at a time so the anonymous-tier rate limit on text.pollinations.ai isn't hit. **The `testpages/` directory is throwaway scaffolding** — keep the userscript and the test mirror in sync while it exists, but expect to delete the directory before release. After deletion, the captcha module lives only in `lbast_battle.user.js`.
-
 ### State and side-effect conventions
 
 - **Settings persistence:** all user settings go in `localStorage.lbastAuto_*` keys (`goHP`, `houseHP`, `useDukeEstate`, `TGToken`, `TGID`, `letterSound`, `alarmSound`, `timeClick`). Booleans are stored as the strings `'true'`/`'false'`. Driver-specific settings extend the settings form via `LbastUtils.registerCustomSettings(scriptId, {html, saveHandler})`.
