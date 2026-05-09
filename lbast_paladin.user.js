@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_paladin
 // @namespace    http://tampermonkey.net/
-// @version      2025.02.25
+// @version      2026.05.09
 // @author       Agent_
 // @include      *paladin-auto.lbast.ru/loc*
 // @include      *paladin-auto.lbast.ru/rudnik*
@@ -82,6 +82,9 @@
             } else {
                 location.href = location.origin + `/location.php?r=2012&mod=fastway&lway=${hometown}`;
             }
+        }
+        else if(~str.indexOf('Вы не нашли ничего интересного')) {
+            location.href = location.origin + '/location.php?r=2012&mod=fastway&lway=8';
         }
         else if(~str.indexOf('устали')) {
             xhr.open('GET', location.origin + '/location.php', false);
