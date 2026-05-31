@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_paladin
 // @namespace    http://tampermonkey.net/
-// @version      2026.05.09
+// @version      2026.05.31
 // @author       Agent_
 // @include      *paladin-auto.lbast.ru/loc*
 // @include      *paladin-auto.lbast.ru/rudnik*
@@ -57,15 +57,22 @@
             location.href = location.origin + '/location.php?r=6976&mod=fastway&lway=8';
         }
         else if((~str.indexOf('Центральная площадь') && hometown === 2) || (~str.indexOf('поднятый в') && hometown === 3) || (~str.indexOf('Северо-западный форпост') && hometown === 6)) {
-            if(myHP >= goHP) {
-                location.href = location.origin + '/location.php?r=2148&mod=fastway&lway=1';
-            }
-            else if(myHP <= houseHP) {
+            const res = utils.getReserves(str);
+            if(myHP <= houseHP) {
                 if(useDukeEstate) {
                     location.href = location.origin + '/location.php?r=1450&mod=konj&lway=22';
                 } else {
                     location.href = location.origin + '/location.php?r=1460&mod=fastway&lway=4';
                 }
+            }
+            else if(res !== null && res < 0) {
+                utils.update(rand * 1200);
+            }
+            else if(res !== null && res < 5) {
+                utils.update(rand * 480);
+            }
+            else if(myHP >= goHP) {
+                location.href = location.origin + '/location.php?r=2148&mod=fastway&lway=1';
             }
             else if(myHP <= 0) {
                 utils.update(rand * 1200);
@@ -73,14 +80,17 @@
                 utils.update(rand * 480);
             }
         }
-        else if(~str.indexOf('Продолжить квест')) {
-            utils.click('Продолжить квест');
-        }
         else if(~str.indexOf('стоит склеп')) {
-            if(myHP >= goHP) {
-                utils.click('смотреть');
-            } else {
-                location.href = location.origin + `/location.php?r=2012&mod=fastway&lway=${hometown}`;
+            if(~str.indexOf('Продолжить квест')) {
+                utils.click('Продолжить квест');
+            }
+            else {
+                const res = utils.getReserves(str);
+                if(myHP >= goHP && (res === null || res >= 5)) {
+                    utils.click('смотреть');
+                } else {
+                    location.href = location.origin + `/location.php?r=2012&mod=fastway&lway=${hometown}`;
+                }
             }
         }
         else if(~str.indexOf('Вы не нашли ничего интересного')) {
@@ -141,11 +151,15 @@
             utils.click('запад');
         }
         else if((~str.indexOf('был заложен первый камень форта') && !useDukeEstate) || (~str.indexOf('родовые поместья высшей знати Ардена') && useDukeEstate)) {
-            if(myHP >= goHP) {
-                location.href = location.origin + '/location.php?r=8281&mod=fastway&lway=8';
-            }
-            else if(myHP <= houseHP) {
+            const res = utils.getReserves(str);
+            if(myHP <= houseHP) {
                 utils.update(rand * 2400);
+            }
+            else if(res !== null && res < 5) {
+                location.href = location.origin + `/location.php?r=3594&mod=fastway&lway=${hometown}`;
+            }
+            else if(myHP >= goHP) {
+                location.href = location.origin + '/location.php?r=8281&mod=fastway&lway=8';
             }
             else {
                 location.href = location.origin + `/location.php?r=3594&mod=fastway&lway=${hometown}`;
@@ -184,7 +198,8 @@
                 location.href = location.origin + '/location.php';
             }, (rtime * 60000) + 60000);
         } else {
-            if(myHP < goHP) {
+            const res = utils.getReserves(str);
+            if(myHP < goHP || (res !== null && res < 5)) {
                 location.href = location.origin + `/location.php?r=3594&mod=fastway&lway=${hometown}`;
             } else {
                 location.href = location.origin + '/location.php?r=8281&mod=fastway&lway=8';

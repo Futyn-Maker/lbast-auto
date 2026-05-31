@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_utils
 // @namespace    http://tampermonkey.net/
-// @version      2026.04.26
+// @version      2026.05.31
 // @author       Agent_
 // @include      *auto.lbast.ru/*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -239,6 +239,41 @@
         return null;
     }
 
+    function parseReserves(str) {
+        const hp = str.match(/[❤(]\s*-?\d+\s*\/\s*-?\d+/u);
+        if (!hp) {
+            return null;
+        }
+        const start = hp.index + hp[0].length;
+        const after = str.slice(start, start + 30);
+        const match = after.match(/⌚\s*(-?\d+)|\(\s*(-?\d+)\s*\)/u);
+        if (!match) {
+            return null;
+        }
+        const value = parseInt(match[1] !== undefined ? match[1] : match[2]);
+        return Number.isNaN(value) ? null : value;
+    }
+
+    function getReserves(str) {
+        if (str === undefined) {
+            str = $("body").text();
+        }
+        const fromPage = parseReserves(str);
+        if (fromPage !== null) {
+            return fromPage;
+        }
+        try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', location.origin + '/chat.php?r=4831', false);
+            xhr.send();
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = xhr.responseText;
+            return parseReserves($(tempDiv).text());
+        } catch (e) {
+            return null;
+        }
+    }
+
     window.LbastUtils = {
         SOUNDS,
         HOMETOWN,
@@ -249,6 +284,8 @@
         playSound,
         sendTGMessage,
         parseHP,
+        parseReserves,
+        getReserves,
         getPlayerInfo,
 
         renderSettings,

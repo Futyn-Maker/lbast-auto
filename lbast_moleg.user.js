@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         lbast_moleg
 // @namespace    http://tampermonkey.net/
-// @version      2025.08.12
+// @version      2026.05.31
 // @author       Agent_
 // @include      *moleg-auto.lbast.ru/loc*
 // @include      *moleg-auto.lbast.ru/rudnik*
@@ -57,15 +57,19 @@
             location.href = location.origin + '/location.php?r=7484&mod=konj&lway=20';
         }
         else if((~str.indexOf('Центральная площадь') && hometown === 2) || (~str.indexOf('поднятый в') && hometown === 3) || (~str.indexOf('Северо-западный форпост') && hometown === 6)) {
-            if(myHP >= goHP) {
-                location.href = location.origin + '/location.php?r=2148&mod=fastway&lway=1';
-            }
-            else if(myHP <= houseHP) {
+            const res = utils.getReserves(str);
+            if(myHP <= houseHP) {
                 if(useDukeEstate) {
                     location.href = location.origin + '/location.php?r=1450&mod=konj&lway=22';
                 } else {
                     location.href = location.origin + '/location.php?r=1460&mod=fastway&lway=4';
                 }
+            }
+            else if(res !== null && res < 0) {
+                utils.update(rand * 900);
+            }
+            else if(myHP >= goHP) {
+                location.href = location.origin + '/location.php?r=2148&mod=fastway&lway=1';
             }
             else if(myHP <= 0) {
                 utils.update(rand * 1200);
@@ -74,7 +78,8 @@
             }
         }
         else if(~str.indexOf('Мощное извержение вулкана')) {
-            if(myHP >= goHP) {
+            const res = utils.getReserves(str);
+            if(myHP >= goHP && (res === null || res >= 0)) {
                 utils.click('Зайти');
             } else {
                 location.href = location.origin + `/location.php?r=2012&mod=fastway&lway=${hometown}`;
@@ -93,11 +98,15 @@
             }
         }
         else if((~str.indexOf('был заложен первый камень форта') && !useDukeEstate) || (~str.indexOf('родовые поместья высшей знати Ардена') && useDukeEstate)) {
-            if(myHP >= goHP) {
-                location.href = location.origin + '/location.php?r=7484&mod=konj&lway=20';
-            }
-            else if(myHP <= houseHP) {
+            const res = utils.getReserves(str);
+            if(myHP <= houseHP) {
                 utils.update(rand * 2400);
+            }
+            else if(res !== null && res < 0) {
+                location.href = location.origin + `/location.php?r=3594&mod=fastway&lway=${hometown}`;
+            }
+            else if(myHP >= goHP) {
+                location.href = location.origin + '/location.php?r=7484&mod=konj&lway=20';
             }
             else {
                 location.href = location.origin + `/location.php?r=3594&mod=fastway&lway=${hometown}`;
@@ -133,7 +142,8 @@
                 location.href = location.origin + '/location.php';
             }, (rtime * 60000) + 60000);
         } else {
-            if(myHP < goHP) {
+            const res = utils.getReserves(str);
+            if(myHP < goHP || (res !== null && res < 0)) {
                 location.href = location.origin + `/location.php?r=3594&mod=fastway&lway=${hometown}`;
             } else {
                 location.href = location.origin + '/location.php?r=7484&mod=konj&lway=20';
