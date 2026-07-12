@@ -106,7 +106,7 @@ export function confirmMenu(yesData, noData) {
 }
 
 export function settingsMenu(leveler) {
-  return new InlineKeyboard()
+  const kb = new InlineKeyboard()
     .text("HP для работы", `lvset:goHP:${leveler.id}`)
     .row()
     .text("HP для лечения", `lvset:houseHP:${leveler.id}`)
@@ -114,8 +114,12 @@ export function settingsMenu(leveler) {
     .text("Лечение в поместье", `lvset:duke:${leveler.id}`)
     .row()
     .text("Задержка кликов", `lvset:timeClick:${leveler.id}`)
-    .row()
-    .text("◀️ Назад", `lv:${leveler.id}`);
+    .row();
+  if (leveler.driverKey === "bleyk") {
+    kb.text("Опыт X2", `lvset:expo:${leveler.id}`).row();
+  }
+  kb.text("◀️ Назад", `lv:${leveler.id}`);
+  return kb;
 }
 
 export function usersMenu(users) {

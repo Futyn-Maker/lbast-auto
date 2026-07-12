@@ -3,17 +3,24 @@ import path from "node:path";
 import { Sequelize, DataTypes } from "sequelize";
 import { config } from "./config.js";
 
-let databaseUrl = config.databaseUrl;
-if (databaseUrl.startsWith("sqlite:")) {
-  const filePart = databaseUrl.slice("sqlite:".length);
-  if (filePart && filePart !== ":memory:" && !path.isAbsolute(filePart)) {
-    const absolute = path.join(config.serverRoot, filePart);
-    fs.mkdirSync(path.dirname(absolute), { recursive: true });
-    databaseUrl = "sqlite:" + absolute;
+function createSequelize() {
+  const url = config.databaseUrl;
+  if (url.startsWith("sqlite:")) {
+    let storage = url.slice("sqlite:".length);
+    if (storage === ":memory:" || storage === "") {
+      storage = ":memory:";
+    } else {
+      if (!path.isAbsolute(storage)) {
+        storage = path.join(config.serverRoot, storage);
+      }
+      fs.mkdirSync(path.dirname(storage), { recursive: true });
+    }
+    return new Sequelize({ dialect: "sqlite", storage, logging: false });
   }
+  return new Sequelize(url, { logging: false });
 }
 
-export const sequelize = new Sequelize(databaseUrl, { logging: false });
+export const sequelize = createSequelize();
 
 export const User = sequelize.define("User", {
   tgId: { type: DataTypes.BIGINT, allowNull: false, unique: true },

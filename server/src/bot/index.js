@@ -265,10 +265,23 @@ export function createBot() {
     }
     flow.data.driverKey = key;
     flow.step = "name";
+    const character = await Character.findByPk(flow.data.characterId);
+    const login = character ? character.login : "персонаж";
     await ctx.editMessageText(`Выбрано: ${DRIVERS[key].label}`);
     await ctx.reply(
-      "Введите название для этого автокача (например, «Барон на Agent_»):",
+      `Введите название для этого автокача (например, «${DRIVERS[key].label} на ${login}»):`,
     );
+  });
+
+  // ===== Leveler view =====
+  bot.callbackQuery(/^lv:(\d+)$/, async (ctx) => {
+    clearFlow(ctx);
+    const leveler = await ownedLeveler(ctx, Number(ctx.match[1]));
+    await ctx.answerCallbackQuery();
+    if (!leveler) {
+      return;
+    }
+    await showLeveler(ctx, leveler);
   });
 
   // ===== Leveler actions =====
@@ -410,6 +423,23 @@ export function createBot() {
     );
   });
 
+  bot.callbackQuery(/^lvset:expo:(\d+)$/, async (ctx) => {
+    const leveler = await ownedLeveler(ctx, Number(ctx.match[1]));
+    await ctx.answerCallbackQuery();
+    if (!leveler) {
+      return;
+    }
+    const extra = leveler.extraSettings
+      ? JSON.parse(leveler.extraSettings)
+      : {};
+    extra.expo = !extra.expo;
+    await leveler.update({ extraSettings: JSON.stringify(extra) });
+    const fresh = await ownedLeveler(ctx, leveler.id);
+    await ctx.editMessageText(`Опыт X2: ${extra.expo ? "да" : "нет"}`, {
+      reply_markup: settingsMenu(fresh),
+    });
+  });
+
   bot.callbackQuery(/^lvset:(goHP|houseHP|timeClick):(\d+)$/, async (ctx) => {
     const field = ctx.match[1];
     const leveler = await ownedLeveler(ctx, Number(ctx.match[2]));
@@ -530,15 +560,18 @@ export function createBot() {
       if (flow.step === "password") {
         flow.data.password = text;
         clearFlow(ctx);
-        await ctx.reply("Проверяю вход в игру, подождите…");
+        const wait = await ctx.reply("Проверяю вход в игру, подождите…");
         const result = await testCredentials(
           flow.data.login,
           flow.data.password,
         );
         if (!result.ok) {
-          await ctx.reply(`Не удалось войти: ${result.error}`, {
-            reply_markup: mainMenu(ctx.from.id),
-          });
+          await ctx.api.editMessageText(
+            ctx.chat.id,
+            wait.message_id,
+            `Не удалось войти как ${flow.data.login}: ${result.error}`,
+            { reply_markup: mainMenu(ctx.from.id) },
+          );
           return;
         }
         await Character.create({
@@ -548,9 +581,12 @@ export function createBot() {
           cookies: JSON.stringify(result.storageState),
           authStatus: "ok",
         });
-        await ctx.reply(`Персонаж ${flow.data.login} добавлен и авторизован.`, {
-          reply_markup: mainMenu(ctx.from.id),
-        });
+        await ctx.api.editMessageText(
+          ctx.chat.id,
+          wait.message_id,
+          `Персонаж ${flow.data.login} добавлен и авторизован.`,
+          { reply_markup: mainMenu(ctx.from.id) },
+        );
         return;
       }
     }
@@ -561,12 +597,17 @@ export function createBot() {
       if (!character) {
         return;
       }
-      await ctx.reply("Проверяю новый пароль…");
+      const wait = await ctx.reply("Проверяю новый пароль…");
       const result = await testCredentials(character.login, text);
       if (!result.ok) {
-        await ctx.reply(`Пароль не подошёл: ${result.error}`, {
-          reply_markup: mainMenu(ctx.from.id),
-        });
+        await ctx.api.editMessageText(
+          ctx.chat.id,
+          wait.message_id,
+          `Пароль не подошёл: ${result.error}`,
+          {
+            reply_markup: mainMenu(ctx.from.id),
+          },
+        );
         return;
       }
       await character.update({
@@ -574,9 +615,12 @@ export function createBot() {
         cookies: JSON.stringify(result.storageState),
         authStatus: "ok",
       });
-      await ctx.reply(`Пароль персонажа ${character.login} обновлён.`, {
-        reply_markup: mainMenu(ctx.from.id),
-      });
+      await ctx.api.editMessageText(
+        ctx.chat.id,
+        wait.message_id,
+        `Пароль персонажа ${character.login} обновлён.`,
+        { reply_markup: mainMenu(ctx.from.id) },
+      );
       return;
     }
 
@@ -589,7 +633,7 @@ export function createBot() {
         flow.data.name = text;
         flow.step = "goHP";
         await ctx.reply(
-          "Введите минимальное HP, при котором автокач будет работать (например, 200):",
+          "Введите минимальное HP, при котором автокач будет работать (например, 1200):",
         );
         return;
       }
@@ -600,40 +644,10 @@ export function createBot() {
           return;
         }
         flow.data.goHP = n;
-        flow.step = "houseHP";
-        await ctx.reply(
-          "Введите отрицательное HP, при котором идти лечиться (например, -1000):",
-        );
-        return;
-      }
-      if (flow.step === "houseHP") {
-        const n = parseInt(text, 10);
-        if (Number.isNaN(n)) {
-          await ctx.reply("Введите число:");
-          return;
-        }
-        flow.data.houseHP = n;
         flow.step = "duke";
         await ctx.reply("Лечиться в поместье герцога вместо Кулака Хаоса?", {
           reply_markup: yesNoMenu("lvadd:duke:1", "lvadd:duke:0"),
         });
-        return;
-      }
-      if (flow.step === "timeClick") {
-        const n = parseInt(text, 10);
-        if (Number.isNaN(n) || n < 0) {
-          await ctx.reply("Введите неотрицательное число:");
-          return;
-        }
-        flow.data.timeClick = n;
-        if (flow.data.driverKey === "bleyk") {
-          flow.step = "expo";
-          await ctx.reply("Автоматически активировать опыт X2?", {
-            reply_markup: yesNoMenu("lvadd:expo:1", "lvadd:expo:0"),
-          });
-          return;
-        }
-        await finalizeLeveler(ctx, flow);
         return;
       }
     }
@@ -698,24 +712,8 @@ export function createBot() {
       return;
     }
     flow.data.useDukeEstate = ctx.match[1] === "1";
-    flow.step = "timeClick";
     await ctx.editMessageText(
       `Лечение в поместье: ${flow.data.useDukeEstate ? "да" : "нет"}`,
-    );
-    await ctx.reply(
-      "Введите задержку между кликами в миллисекундах (рекомендуется 700 для сервера):",
-    );
-  });
-
-  bot.callbackQuery(/^lvadd:expo:(0|1)$/, async (ctx) => {
-    const flow = flows.get(ctx.from.id);
-    await ctx.answerCallbackQuery();
-    if (!flow || flow.kind !== "lv_add" || flow.step !== "expo") {
-      return;
-    }
-    flow.data.extraSettings = { expo: ctx.match[1] === "1" };
-    await ctx.editMessageText(
-      `Опыт X2: ${flow.data.extraSettings.expo ? "да" : "нет"}`,
     );
     await finalizeLeveler(ctx, flow);
   });
@@ -728,14 +726,11 @@ export function createBot() {
       driverKey: d.driverKey,
       name: d.name,
       goHP: d.goHP,
-      houseHP: d.houseHP,
       useDukeEstate: !!d.useDukeEstate,
-      timeClick: d.timeClick,
-      extraSettings: d.extraSettings ? JSON.stringify(d.extraSettings) : null,
       desiredState: "stopped",
     });
     await ctx.reply(
-      `Автокач «${d.name}» создан. Откройте его в разделе «Автокачи», чтобы запустить.`,
+      `Автокач «${d.name}» создан. Настройки лечения и задержки можно изменить в его меню. Откройте раздел «Автокачи», чтобы запустить.`,
       {
         reply_markup: mainMenu(ctx.from.id),
       },
