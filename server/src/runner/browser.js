@@ -5,9 +5,17 @@ let browserPromise = null;
 
 export function getBrowser() {
   if (!browserPromise) {
+    const args = ["--disable-blink-features=AutomationControlled"];
+    if (config.noSandbox) {
+      args.push(
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+      );
+    }
     browserPromise = chromium.launch({
       headless: config.headless,
-      args: ["--disable-blink-features=AutomationControlled"],
+      args,
     });
   }
   return browserPromise;

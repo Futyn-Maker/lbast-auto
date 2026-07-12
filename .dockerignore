@@ -1,0 +1,9 @@
+# Build context is the repo root (see server/docker-compose.yml).
+# The Dockerfile copies only server/ and *.user.js, so nothing else is baked in;
+# these entries just keep the build context small.
+.git
+.gitignore
+.dockerignore
+**/node_modules
+server/.env
+server/data

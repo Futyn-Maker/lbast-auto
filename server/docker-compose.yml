@@ -1,0 +1,24 @@
+services:
+  lbast-auto:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: lbast-auto-server
+    container_name: lbast-auto-server
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      # In a container the browser must run headless without the Chromium sandbox.
+      HEADLESS: "true"
+      BROWSER_NO_SANDBOX: "true"
+      # Keep SQLite inside the mounted volume; override in .env for an external DB.
+      DATABASE_URL: "sqlite:data/lbast.db"
+    volumes:
+      - lbast-data:/app/server/data
+    # Chromium needs more shared memory than Docker's 64 MB default.
+    shm_size: "1gb"
+
+volumes:
+  lbast-data:
