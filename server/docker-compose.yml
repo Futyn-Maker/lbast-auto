@@ -16,9 +16,10 @@ services:
       # Keep SQLite inside the mounted volume; override in .env for an external DB.
       DATABASE_URL: "sqlite:data/lbast.db"
     volumes:
-      - lbast-data:/app/server/data
+      # Bind mount: the SQLite DB lives in server/data/lbast.db on the host, so it is
+      # the same file for Docker and non-Docker runs. On Linux this directory must be
+      # writable by uid 1000 (the container's pwuser); Docker Desktop handles it on
+      # Windows/macOS automatically.
+      - ./data:/app/server/data
     # Chromium needs more shared memory than Docker's 64 MB default.
     shm_size: "1gb"
-
-volumes:
-  lbast-data:
