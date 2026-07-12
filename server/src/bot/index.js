@@ -112,11 +112,7 @@ export function createBot() {
       `Автокач: ${leveler.name}\n` +
       `Персонаж: ${leveler.Character.login}\n` +
       `Бот/квест: ${driver ? driver.label : leveler.driverKey}\n` +
-      `Состояние: ${stateLabel}\n\n` +
-      `HP для работы: ${leveler.goHP}\n` +
-      `HP для лечения: ${leveler.houseHP}\n` +
-      `Лечение в поместье: ${leveler.useDukeEstate ? "да" : "нет"}\n` +
-      `Задержка кликов: ${leveler.timeClick} мс`;
+      `Состояние: ${stateLabel}`;
     await ctx
       .editMessageText(text, { reply_markup: levelerMenu(leveler, running) })
       .catch(() => {});

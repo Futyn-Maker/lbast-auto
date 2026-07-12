@@ -23,6 +23,7 @@ export class Runner {
     this.wakeAt = null;
     this.stallCount = 0;
     this.reauthInProgress = false;
+    this.clickPending = false;
     this.context = null;
     this.page = null;
     this.watchdogTimer = null;
@@ -68,6 +69,9 @@ export class Runner {
       this.wakeAt = Number(payload.wakeAt) || null;
       this.pushEvent("sleep", text);
     } else if (type === "action") {
+      if (text.startsWith("Клик")) {
+        this.clickPending = true;
+      }
       this.pushEvent("action", text);
     } else if (type === "notify") {
       this.pushEvent("notify", text);
@@ -101,6 +105,10 @@ export class Runner {
       if (frame === this.page.mainFrame()) {
         this.activity();
         this.wakeAt = null;
+        if (this.clickPending) {
+          this.clickPending = false;
+          return;
+        }
         this.pushEvent(
           "nav",
           "Переход: " + frame.url().replace(config.gameUrl, ""),
