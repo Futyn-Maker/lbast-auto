@@ -95,7 +95,18 @@
     localStorage.lbastAuto_useDukeEstate = "false";
   }
 
+  function serverReport(payload) {
+    if (window.__lbastServer && typeof window.__lbastReport === "function") {
+      try {
+        window.__lbastReport(payload);
+      } catch (e) {}
+      return true;
+    }
+    return false;
+  }
+
   function click(text) {
+    serverReport({ type: "action", text: "Клик: " + text });
     const timeClick = parseInt(localStorage.lbastAuto_timeClick);
     const time = Math.floor(
       timeClick -
@@ -116,6 +127,11 @@
   }
 
   function update(time) {
+    serverReport({
+      type: "sleep",
+      text: "Ожидание обновления",
+      wakeAt: Date.now() + time,
+    });
     document.getElementsByTagName("footer")[0].innerHTML +=
       "<p>Автоматическое обновление произойдёт примерно через " +
       String(Math.floor(time / 60000)) +
@@ -126,6 +142,9 @@
   }
 
   function playSound(type, check = true) {
+    if (window.__lbastServer) {
+      return;
+    }
     if (
       !check ||
       (localStorage.lbastAuto_letterSound === "true" && type === "letter") ||
@@ -138,6 +157,9 @@
   }
 
   function sendTGMessage(message) {
+    if (serverReport({ type: "notify", text: String(message) })) {
+      return;
+    }
     const chat_id = localStorage.lbastAuto_TGID;
     const token = localStorage.lbastAuto_TGToken;
     if (!isNaN(chat_id) && chat_id > 0 && token) {
