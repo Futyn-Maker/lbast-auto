@@ -274,7 +274,7 @@
   }
 
   function parseHP(str) {
-    const match = str.match(/[(❤ )\(] ?-?\d+\//u);
+    const match = str.match(/[❤(]\s*-?\d+\s*\//u);
     if (match) {
       return parseInt(match[0].match(/-?\d+/)[0]);
     }
