@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_battle
 // @namespace    http://tampermonkey.net/
-// @version      2026.04.27
+// @version      2026.08.22
 // @author       Agent_
 // @include      *auto.lbast.ru/arena_go*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -465,7 +465,7 @@
     const isPvp = opponentLink !== null;
 
     if (!isPvp) {
-      if ($("a:contains('Умение')").length) {
+      if (playerInfo.hasSkill && $("a:contains('Умение')").length) {
         utils.click("Умение");
       } else if ($("a:contains('Ударить')").length) {
         utils.click("Ударить");
