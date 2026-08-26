@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_utils
 // @namespace    http://tampermonkey.net/
-// @version      2026.07.12
+// @version      2026.08.26
 // @author       Agent_
 // @include      *auto.lbast.ru/*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -28,17 +28,25 @@
   function getPlayerInfo() {
     if (
       sessionStorage.lbastAuto_playerNickname &&
-      sessionStorage.lbastAuto_playerAlignment
+      sessionStorage.lbastAuto_playerAlignment &&
+      sessionStorage.lbastAuto_playerHasSkill
     ) {
       return {
         nickname: sessionStorage.lbastAuto_playerNickname,
         alignment: sessionStorage.lbastAuto_playerAlignment,
+        hasSkill: sessionStorage.lbastAuto_playerHasSkill === "true",
       };
     }
 
     const xhr = new XMLHttpRequest();
     xhr.open("GET", location.origin + "/pers.php?r=5778", false);
     xhr.send();
+
+    sessionStorage.lbastAuto_playerHasSkill = ~xhr.responseText.indexOf(
+      "Боевое умение",
+    )
+      ? "true"
+      : "false";
 
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = xhr.responseText;
@@ -76,6 +84,7 @@
     return {
       nickname: sessionStorage.lbastAuto_playerNickname,
       alignment: sessionStorage.lbastAuto_playerAlignment,
+      hasSkill: sessionStorage.lbastAuto_playerHasSkill === "true",
     };
   }
 

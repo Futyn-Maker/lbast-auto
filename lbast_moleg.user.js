@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_moleg
 // @namespace    http://tampermonkey.net/
-// @version      2026.07.12
+// @version      2026.08.26
 // @author       Agent_
 // @include      *moleg-auto.lbast.ru/loc*
 // @include      *moleg-auto.lbast.ru/rudnik*

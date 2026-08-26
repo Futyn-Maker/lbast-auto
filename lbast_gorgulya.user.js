@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_gorgulya
 // @namespace    http://tampermonkey.net/
-// @version      2026.07.12
+// @version      2026.08.26
 // @author       Agent_
 // @include      *gorgulya-auto.lbast.ru/loc*
 // @include      *gorgulya-auto.lbast.ru/rudnik*

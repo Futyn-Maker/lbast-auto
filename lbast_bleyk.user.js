@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_bleyk
 // @namespace    http://tampermonkey.net/
-// @version      2026.07.12
+// @version      2026.08.26
 // @author       Agent_
 // @include      *bleyk-auto.lbast.ru/loc*
 // @include      *bleyk-auto.lbast.ru/pers*

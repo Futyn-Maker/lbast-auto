@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_paladin
 // @namespace    http://tampermonkey.net/
-// @version      2026.07.12
+// @version      2026.08.26
 // @author       Agent_
 // @include      *paladin-auto.lbast.ru/loc*
 // @include      *paladin-auto.lbast.ru/rudnik*
