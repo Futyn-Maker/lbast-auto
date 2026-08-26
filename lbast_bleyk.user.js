@@ -27,46 +27,14 @@
     const ctx = d.makeCtx({
       title: "Автокач (Блейки), Последний Бастион",
       targetUrl: targetUrl,
-      hometownGo: () => {
-        if (localStorage.lbastAuto_expo === "true") {
-          const xhr = new XMLHttpRequest();
-          xhr.open("GET", location.origin + "/pers.php?r=3503", false);
-          xhr.send();
-          const t = xhr.responseText;
-          if (~t.indexOf("Активирован опыт x2")) {
-            location.href = targetUrl;
-          } else if (~t.indexOf("Опыт x2: доступно")) {
-            location.href =
-              location.origin + "/pers.php?r=3525&mod=activateexp";
-          } else {
-            location.href = targetUrl;
-          }
-        } else {
-          location.href = targetUrl;
-        }
-      },
+      fastTargetUrl: targetUrl,
     });
     if (!ctx) {
       return;
     }
     const str = ctx.str;
 
-    if (
-      d.settingsPage(() => {
-        utils.registerCustomSettings("bleyk", {
-          html: `
-                    <p>
-                        <label>Автоматически активировать опыт X2
-                            <input name="expo" type="checkbox" tabindex="0" ${localStorage.lbastAuto_expo === "true" ? "checked" : ""}/>
-                        </label>
-                    </p>
-                `,
-          saveHandler: (form) => {
-            localStorage.lbastAuto_expo = form.elements.expo.checked;
-          },
-        });
-      })
-    ) {
+    if (d.settingsPage()) {
     } else if (d.notConfigured(ctx)) {
     } else if (d.mail(ctx)) {
     } else if (d.hometown(ctx)) {
@@ -86,10 +54,7 @@
     } else if (d.autoban(ctx)) {
     } else if (d.enterBattle(ctx)) {
     } else if (d.pathPending(ctx)) {
-    } else if (~str.indexOf("Подтвердите активацию")) {
-      utils.click("Активировать");
-    } else if (~str.indexOf("активировали")) {
-      utils.click("В игру");
+    } else if (d.expActivation(ctx)) {
     } else if (d.work(ctx)) {
     } else {
       d.goHomeOrTarget(ctx);

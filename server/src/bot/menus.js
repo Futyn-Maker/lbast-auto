@@ -107,7 +107,8 @@ export function confirmMenu(yesData, noData) {
 
 export function settingsMenu(leveler) {
   const duke = leveler.useDukeEstate ? "да" : "нет";
-  const kb = new InlineKeyboard()
+  const extra = leveler.extraSettings ? JSON.parse(leveler.extraSettings) : {};
+  return new InlineKeyboard()
     .text(`HP для работы: ${leveler.goHP}`, `lvset:goHP:${leveler.id}`)
     .row()
     .text(`HP для лечения: ${leveler.houseHP}`, `lvset:houseHP:${leveler.id}`)
@@ -118,18 +119,10 @@ export function settingsMenu(leveler) {
       `Задержка кликов: ${leveler.timeClick} мс`,
       `lvset:timeClick:${leveler.id}`,
     )
-    .row();
-  if (leveler.driverKey === "bleyk") {
-    const extra = leveler.extraSettings
-      ? JSON.parse(leveler.extraSettings)
-      : {};
-    kb.text(
-      `Опыт X2: ${extra.expo ? "да" : "нет"}`,
-      `lvset:expo:${leveler.id}`,
-    ).row();
-  }
-  kb.text("◀️ Назад", `lv:${leveler.id}`);
-  return kb;
+    .row()
+    .text(`Опыт X2: ${extra.expo ? "да" : "нет"}`, `lvset:expo:${leveler.id}`)
+    .row()
+    .text("◀️ Назад", `lv:${leveler.id}`);
 }
 
 export function usersMenu(users) {

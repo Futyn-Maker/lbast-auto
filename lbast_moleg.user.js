@@ -4,6 +4,7 @@
 // @version      2026.08.26
 // @author       Agent_
 // @include      *moleg-auto.lbast.ru/loc*
+// @include      *moleg-auto.lbast.ru/pers*
 // @include      *moleg-auto.lbast.ru/rudnik*
 // @include      *moleg-auto.lbast.ru/settings
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -47,6 +48,7 @@
     } else if (d.autoban(ctx)) {
     } else if (d.enterBattle(ctx)) {
     } else if (d.pathPending(ctx)) {
+    } else if (d.expActivation(ctx)) {
     } else if (d.work(ctx)) {
     } else {
       d.goHomeOrTarget(ctx);

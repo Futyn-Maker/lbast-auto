@@ -1,5 +1,5 @@
 import { scripts } from "../game/scripts.js";
-import { DRIVER_EXTRA_SETTINGS } from "../game/drivers.js";
+import { EXTRA_SETTINGS } from "../game/drivers.js";
 
 export function buildInitScript(leveler) {
   const settings = {
@@ -11,20 +11,16 @@ export function buildInitScript(leveler) {
     lbastAuto_alarmSound: "false",
   };
 
-  const extraDefs = DRIVER_EXTRA_SETTINGS[leveler.driverKey] || [];
   const extraValues = leveler.extraSettings
     ? JSON.parse(leveler.extraSettings)
     : {};
-  for (const def of extraDefs) {
+  for (const def of EXTRA_SETTINGS) {
     const value =
       extraValues[def.key] !== undefined ? extraValues[def.key] : def.default;
     settings[def.localStorageKey] = String(value);
   }
 
-  const driverPaths = ["/loc", "/rudnik"];
-  if (leveler.driverKey === "bleyk") {
-    driverPaths.push("/pers");
-  }
+  const driverPaths = ["/loc", "/rudnik", "/pers"];
 
   return `
 (function () {

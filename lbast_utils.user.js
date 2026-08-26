@@ -103,6 +103,9 @@
   if (localStorage.lbastAuto_useDukeEstate === undefined) {
     localStorage.lbastAuto_useDukeEstate = "false";
   }
+  if (localStorage.lbastAuto_expo === undefined) {
+    localStorage.lbastAuto_expo = "false";
+  }
 
   function serverReport(payload) {
     if (window.__lbastServer && typeof window.__lbastReport === "function") {
@@ -201,6 +204,13 @@
                     </label>
                 </p>
                 <p>Отметьте эту опцию только если ваш титул не ниже герцога и вы приобрели поместье.</p>
+                <p>
+                    <label>
+                        <input type="checkbox" name="expo" tabindex="0" ${localStorage.lbastAuto_expo === "true" ? "checked" : ""}/>
+                        Автоматически активировать опыт X2
+                    </label>
+                </p>
+                <p>Отметьте эту опцию, если вы приобрели опыт X2: перед тем как идти к боту, персонаж будет активировать его, когда он доступен.</p>
                 <p><strong>Настройка Telegram-оповещений</strong></p>
                 <p>Для получения оповещений о письмах, нападениях и проверках на автокач создайте собственного Telegram-бота:</p>
                 <ol>
@@ -249,6 +259,7 @@
     localStorage.lbastAuto_goHP = form.elements.goHP.value;
     localStorage.lbastAuto_houseHP = form.elements.houseHP.value;
     localStorage.lbastAuto_useDukeEstate = form.elements.useDukeEstate.checked;
+    localStorage.lbastAuto_expo = form.elements.expo.checked;
     localStorage.lbastAuto_TGToken = form.elements.TGToken.value;
     localStorage.lbastAuto_TGID = form.elements.TGID.value;
     localStorage.lbastAuto_letterSound = form.elements.letterSound.checked;
@@ -419,6 +430,31 @@
     return true;
   }
 
+  function driverGoToTarget(ctx) {
+    if (localStorage.lbastAuto_expo === "true") {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", location.origin + "/pers.php?r=3503", false);
+      xhr.send();
+      if (~xhr.responseText.indexOf("Опыт x2: доступно")) {
+        location.href = location.origin + "/pers.php?r=3525&mod=activateexp";
+        return;
+      }
+    }
+    location.href = ctx.fastTargetUrl;
+  }
+
+  function driverExpActivation(ctx) {
+    const str = ctx.str;
+    if (~str.indexOf("Подтвердите активацию")) {
+      click("Активировать");
+    } else if (~str.indexOf("активировали")) {
+      click("В игру");
+    } else {
+      return false;
+    }
+    return true;
+  }
+
   function driverHometown(ctx) {
     const str = ctx.str;
     if (!(
@@ -445,7 +481,7 @@
       if (ctx.hometownGo) {
         ctx.hometownGo(ctx);
       } else {
-        location.href = ctx.fastTargetUrl;
+        driverGoToTarget(ctx);
       }
     } else if (ctx.myHP <= 0) {
       update(ctx.rand * 1200);
@@ -622,6 +658,7 @@
       autoban: driverAutoban,
       enterBattle: driverEnterBattle,
       pathPending: driverPathPending,
+      expActivation: driverExpActivation,
       work: driverWork,
       goHomeOrTarget: driverGoHomeOrTarget,
     },

@@ -17,14 +17,12 @@ export const DRIVERS = {
   },
 };
 
-export const DRIVER_EXTRA_SETTINGS = {
-  bleyk: [
-    {
-      key: "expo",
-      localStorageKey: "lbastAuto_expo",
-      label: "Автоматически активировать опыт X2",
-      type: "boolean",
-      default: false,
-    },
-  ],
-};
+export const EXTRA_SETTINGS = [
+  {
+    key: "expo",
+    localStorageKey: "lbastAuto_expo",
+    label: "Автоматически активировать опыт X2",
+    type: "boolean",
+    default: false,
+  },
+];
