@@ -19,6 +19,10 @@ export const DRIVERS = {
     file: "lbast_glad.user.js",
     label: "Прокачка подкласса «Гладиатор»",
   },
+  yantar: {
+    file: "lbast_yantar.user.js",
+    label: "Янтарная гора",
+  },
 };
 
 export const EXTRA_SETTINGS = [
@@ -29,4 +33,19 @@ export const EXTRA_SETTINGS = [
     type: "boolean",
     default: false,
   },
+  {
+    key: "yantarBot",
+    localStorageKey: "lbastAuto_yantarBot",
+    label: "Бот",
+    type: "choice",
+    options: { gnom: "Призрак янтарного гнома", kirka: "Призрак с киркой" },
+    default: "gnom",
+    drivers: ["yantar"],
+  },
 ];
+
+export function extraSettingsFor(driverKey) {
+  return EXTRA_SETTINGS.filter(
+    (def) => !def.drivers || def.drivers.includes(driverKey),
+  );
+}

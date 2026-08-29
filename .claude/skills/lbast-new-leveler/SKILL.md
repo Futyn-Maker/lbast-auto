@@ -44,7 +44,7 @@ Ground rules for recon:
 - Fetch `pers.php` at the start and after taking the task to learn the exact `Текущее задание:` wording (it may differ from the NPC dialogue — e.g. "Девгарда" vs "Девтаун").
 - Fetch the amulet page (`location.php?…&mod=fastway`) somewhere on the route to see the `lway` list and confirm "Последний портал" semantics.
 - Fight the battle yourself (see the reference) and record the arena result page, the location page after "Вернуться" (look for "Продолжить квест"), and every page until the cycle is closed.
-- After the cycle, try the engage link again while tired to confirm the "устали" text — that is what `d.fatigue` keys on.
+- After the cycle, try the engage link again while tired to confirm the "устали" text, and, if the quest has a `Продолжить квест` step, try that step while tired too (expect "Вам нужно отдохнуть еще N мин.") — `d.fatigue` keys on both wordings and must see `Продолжить квест` in `location.php` to wait in place instead of going home.
 - Watch the reserve counter in the user bar `(N)` across the cycle; that number is `minReserves`.
 - Leave the character in a sane state (teleport home with `location.php?r=…&mod=fastway&lway=<hometown>`) and close the browser. Do not waste reserves on extra runs; one full cycle is enough, and a second only if a branch was ambiguous.
 - Recon is a run in the real game with the user's character; do not do anything outside the described route (no shopping, no PvP, no quests they did not mention).
@@ -56,7 +56,7 @@ If recon is impossible (no credentials, no browser tools, or the character canno
 Create `lbast_<name>.user.js` from the copied skeleton:
 
 - Header: `@name lbast_<name>`, `@version` = today's date `YYYY.MM.DD`, `@include`s for `/loc*`, `/pers*`, `/rudnik*`, `/settings*` on the new subdomain (all four — `/pers*` is needed for X2-EXP activation, `/loc*` also covers `loc.php` NPC pages).
-- `makeCtx` options: `title` ("Автокач (<что>), Последний Бастион"), `targetUrl`, and for quests `minReserves`, the 1200 multipliers and the `fatiguePreCheck` reload hook copied from the paladin.
+- `makeCtx` options: `title` ("Автокач (<что>), Последний Бастион"), `targetUrl`, and for quests `minReserves` and the 1200 multipliers copied from the paladin.
 - Chain in the canonical order (settings → notConfigured → mail → blocked-teleport → hometown → **engage** → post-battle pages → fatigue → walking matches → healPlace/wheatFields/autoban → enterBattle → expActivation → work → goHomeOrTarget). Keep engage-type pages and any page containing "устали" _before_ `d.fatigue`, and any page that contains "В бой" but needs a different click _before_ `d.enterBattle`.
 - Engage through `d.engageOrHome(ctx, linkText)` so the reserve/HP gate applies; fold "Продолжить квест" into the same block so only this quest's continue-link is followed.
 - For quests, a `hasTask()` helper doing a synchronous `pers.php?r=2347` fetch and testing a word unique to this quest's `Текущее задание:` line; use it at every location where the route to the NPC and the route to the target diverge.
@@ -75,7 +75,7 @@ Run `node --check lbast_<name>.user.js`. There is no other test harness. Match t
 
 ## 5. Server mode and docs
 
-- `server/src/game/drivers.js`: add `<name>: { file: "lbast_<name>.user.js", label: "<Russian label>" }`. The bot's driver picker, the script loader and the Docker image all derive from this map, so nothing else is needed for a plain driver. A new driver-specific setting additionally needs an `EXTRA_SETTINGS` entry plus a toggle in `menus.js` / `bot/index.js` (see `expo` for the pattern). The server must be restarted to load the new file.
+- `server/src/game/drivers.js`: add `<name>: { file: "lbast_<name>.user.js", label: "<Russian label>" }`. The bot's driver picker, the script loader and the Docker image all derive from this map, so nothing else is needed for a plain driver. A new driver-specific setting additionally needs an `EXTRA_SETTINGS` entry; a `choice` setting with `options` and `drivers: ["<name>"]` is rendered and cycled generically (see `yantarBot`), while a `boolean` also needs its own toggle in `menus.js` / `bot/index.js` (see `expo`). On the userscript side the same setting is a `registerCustomSettings` block in the driver's `d.settingsPage(...)` callback, reading and writing the matching `localStorage.lbastAuto_*` key. The server must be restarted to load the new file.
 - `readme.md`: add the script to the install list (raw GitHub URL on `refs/heads/main`) and the subdomain to the "Ссылки" list; extend the behaviour section if the driver has a rule users must know (e.g. the reserve gate for quests). Russian, like the rest of the file.
 - `CLAUDE.md`: add the driver to the per-bot driver list and a short paragraph on anything non-obvious (quest task detection word, unusual `makeCtx` options, deliberately unmatched pages). English.
 

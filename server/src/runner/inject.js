@@ -1,5 +1,5 @@
 import { scripts } from "../game/scripts.js";
-import { EXTRA_SETTINGS } from "../game/drivers.js";
+import { extraSettingsFor } from "../game/drivers.js";
 
 export function buildInitScript(leveler) {
   const settings = {
@@ -14,7 +14,7 @@ export function buildInitScript(leveler) {
   const extraValues = leveler.extraSettings
     ? JSON.parse(leveler.extraSettings)
     : {};
-  for (const def of EXTRA_SETTINGS) {
+  for (const def of extraSettingsFor(leveler.driverKey)) {
     const value =
       extraValues[def.key] !== undefined ? extraValues[def.key] : def.default;
     settings[def.localStorageKey] = String(value);

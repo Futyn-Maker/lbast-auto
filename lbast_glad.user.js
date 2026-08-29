@@ -29,18 +29,6 @@
       minReserves: 5,
       negRestMult: 1200,
       fatigueRestMult: 1200,
-      fatiguePreCheck: (c) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("GET", location.origin + "/location.php", false);
-        xhr.send();
-        if (~xhr.responseText.indexOf("Продолжить квест")) {
-          setTimeout(() => {
-            location.reload();
-          }, c.rand * 300);
-          return true;
-        }
-        return false;
-      },
     });
     if (!ctx) {
       return;

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lbast_utils
 // @namespace    http://tampermonkey.net/
-// @version      2026.08.26
+// @version      2026.08.29
 // @author       Agent_
 // @include      *auto.lbast.ru/*
 // @require      https://code.jquery.com/jquery-3.3.1.js
@@ -359,7 +359,6 @@
         fastTargetUrl:
           location.origin + "/location.php?r=2148&mod=fastway&lway=1",
         hometownGo: null,
-        fatiguePreCheck: null,
       },
       opts,
     );
@@ -501,13 +500,20 @@
   }
 
   function driverFatigue(ctx) {
-    if (!~ctx.str.indexOf("устали")) {
+    const str = ctx.str;
+    if (!(~str.indexOf("устали") || ~str.indexOf("нужно отдохнуть"))) {
       return false;
     }
-    if (ctx.fatiguePreCheck && ctx.fatiguePreCheck(ctx)) {
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", location.origin + "/location.php", false);
+    xhr.send();
+    if (~xhr.responseText.indexOf("Продолжить квест")) {
+      const mins = str.match(/еще (\d+) мин/);
+      update(
+        mins ? parseInt(mins[1]) * 60000 + ctx.rand * 60 : ctx.rand * 300,
+      );
       return true;
     }
-    const xhr = new XMLHttpRequest();
     xhr.open(
       "GET",
       location.origin + `/location.php?r=9463&mod=fastway&lway=${ctx.hometown}`,

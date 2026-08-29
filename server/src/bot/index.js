@@ -4,7 +4,7 @@ import { Character, AutoLeveler } from "../db.js";
 import { encrypt } from "../crypto.js";
 import { manager } from "../runner/manager.js";
 import { testCredentials } from "../game/auth.js";
-import { DRIVERS } from "../game/drivers.js";
+import { DRIVERS, EXTRA_SETTINGS } from "../game/drivers.js";
 import { accessMiddleware, isAdmin } from "./access.js";
 import { User } from "../db.js";
 import { sendChunked } from "./notify.js";
@@ -434,6 +434,31 @@ export function createBot() {
     await ctx.editMessageText(`Опыт X2: ${extra.expo ? "да" : "нет"}`, {
       reply_markup: settingsMenu(fresh),
     });
+  });
+
+  bot.callbackQuery(/^lvset:choice:(\w+):(\d+)$/, async (ctx) => {
+    const def = EXTRA_SETTINGS.find(
+      (s) => s.type === "choice" && s.key === ctx.match[1],
+    );
+    const leveler = await ownedLeveler(ctx, Number(ctx.match[2]));
+    await ctx.answerCallbackQuery();
+    if (!leveler || !def) {
+      return;
+    }
+    const extra = leveler.extraSettings
+      ? JSON.parse(leveler.extraSettings)
+      : {};
+    const values = Object.keys(def.options);
+    const current = extra[def.key] !== undefined ? extra[def.key] : def.default;
+    extra[def.key] = values[(values.indexOf(current) + 1) % values.length];
+    await leveler.update({ extraSettings: JSON.stringify(extra) });
+    const fresh = await ownedLeveler(ctx, leveler.id);
+    await ctx.editMessageText(
+      `${def.label}: ${def.options[extra[def.key]]}`,
+      {
+        reply_markup: settingsMenu(fresh),
+      },
+    );
   });
 
   bot.callbackQuery(/^lvset:(goHP|houseHP|timeClick):(\d+)$/, async (ctx) => {

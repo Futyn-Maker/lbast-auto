@@ -1,5 +1,5 @@
 import { InlineKeyboard } from "grammy";
-import { DRIVERS } from "../game/drivers.js";
+import { DRIVERS, extraSettingsFor } from "../game/drivers.js";
 import { isAdmin } from "./access.js";
 
 export const STATE_LABELS = {
@@ -108,7 +108,7 @@ export function confirmMenu(yesData, noData) {
 export function settingsMenu(leveler) {
   const duke = leveler.useDukeEstate ? "да" : "нет";
   const extra = leveler.extraSettings ? JSON.parse(leveler.extraSettings) : {};
-  return new InlineKeyboard()
+  const kb = new InlineKeyboard()
     .text(`HP для работы: ${leveler.goHP}`, `lvset:goHP:${leveler.id}`)
     .row()
     .text(`HP для лечения: ${leveler.houseHP}`, `lvset:houseHP:${leveler.id}`)
@@ -121,8 +121,19 @@ export function settingsMenu(leveler) {
     )
     .row()
     .text(`Опыт X2: ${extra.expo ? "да" : "нет"}`, `lvset:expo:${leveler.id}`)
-    .row()
-    .text("◀️ Назад", `lv:${leveler.id}`);
+    .row();
+  for (const def of extraSettingsFor(leveler.driverKey)) {
+    if (def.type !== "choice") {
+      continue;
+    }
+    const value = extra[def.key] !== undefined ? extra[def.key] : def.default;
+    kb.text(
+      `${def.label}: ${def.options[value]}`,
+      `lvset:choice:${def.key}:${leveler.id}`,
+    ).row();
+  }
+  kb.text("◀️ Назад", `lv:${leveler.id}`);
+  return kb;
 }
 
 export function usersMenu(users) {
