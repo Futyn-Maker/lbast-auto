@@ -15,6 +15,10 @@ export const DRIVERS = {
     file: "lbast_paladin.user.js",
     label: "Прокачка подкласса «Паладин»",
   },
+  glad: {
+    file: "lbast_glad.user.js",
+    label: "Прокачка подкласса «Гладиатор»",
+  },
 };
 
 export const EXTRA_SETTINGS = [
